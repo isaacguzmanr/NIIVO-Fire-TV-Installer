@@ -19,16 +19,6 @@ Instala, actualiza o quita NIIVO en un Amazon Fire TV desde un teléfono Android
 
 El instalador confirma que el dispositivo sea Amazon Fire TV, instala NIIVO, prepara el servicio de accesibilidad que redirige el botón Inicio y abre NIIVO. No puede aceptar por ti el aviso que aparece en el televisor.
 
-## Compilar desde el código fuente
-
-Requisitos: Android Studio o JDK 17, Android SDK Platform 35 y conexión a Internet para descargar las dependencias de Gradle. Desde la carpeta del proyecto, ejecuta en Windows PowerShell:
-
-```powershell
-.\gradlew.bat assembleDebug
-```
-
-El APK de depuración se genera en `app\build\outputs\apk\debug\app-debug.apk`.
-
 ## Versiones
 
 - Instalador NIIVO: **1.4.0** (versionCode 5).
