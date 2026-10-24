@@ -5,7 +5,7 @@
     <application
         android:allowBackup="false"
         android:label="Instalador NIVO"
-        android:icon="@drawable/nivo_logo"
+        android:icon="@mipmap/ic_launcher"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true">
         <activity android:name=".MainActivity" android:exported="true">
