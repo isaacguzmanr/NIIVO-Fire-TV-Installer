@@ -1,0 +1,15 @@
+<resources>
+    <color name="navy">#07111F</color>
+    <color name="panel">#101E2C</color>
+    <color name="turquoise">#21D7D3</color>
+    <color name="text_main">#F4F8FC</color>
+    <color name="text_muted">#A8B7C7</color>
+    <style name="AppTheme" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">@color/turquoise</item>
+        <item name="android:statusBarColor">@color/navy</item>
+        <item name="android:navigationBarColor">@color/navy</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowActionModeOverlay">true</item>
+    </style>
+</resources>
