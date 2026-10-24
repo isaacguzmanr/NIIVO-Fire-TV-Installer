@@ -1,53 +1,41 @@
-# Instalador NIVO para Fire TV
+# NIVO Fire TV Installer
 
-Aplicación Android para instalar o actualizar NIVO en un Fire TV desde un teléfono conectado a la misma red Wi‑Fi. El instalador incluye el APK de NIVO 1.1.
+Instala o actualiza NIVO en un Amazon Fire TV desde un teléfono Android conectado a la misma red Wi‑Fi. Incluye el APK de NIVO 1.1.
 
-## Descargar e instalar en el teléfono
+## Descargas
 
-1. Descarga `releases/Instalador-NIVO-Android-v1.0.apk` desde este repositorio.
-2. Abre el archivo en tu teléfono Android. Si Android lo solicita, permite instalar aplicaciones desde el navegador o administrador de archivos.
-3. Abre **Instalador NIVO**.
+- **Instalador para Android:** `Instalador-NIVO-Android-v1.0.apk`
+- **Código fuente completo del proyecto Android Studio (incluye NIVO y el instalador):** `NIVO-Fire-TV-Installer-source-v1.0.zip`
+- **Comprobaciones SHA-256:** `SHA256SUMS.txt`
 
-## Preparar el Fire TV
+## Instalar NIVO desde el teléfono
 
-1. En Fire TV, abre **Configuración → Mi Fire TV → Acerca de** y pulsa varias veces el nombre del dispositivo hasta activar las opciones de desarrollador (si aún no aparecen).
-2. En **Opciones para desarrolladores**, activa **Depuración ADB**.
-3. Conecta el teléfono y Fire TV a la misma red Wi‑Fi. Evita redes de invitados que aíslen los dispositivos.
-4. En el teléfono, toca **Buscar Fire TV en mi Wi‑Fi**. Si no aparece, escribe la IP que indica Fire TV en **Mi Fire TV → Acerca de → Red**.
-5. Selecciona el dispositivo encontrado y toca **Instalar NIVO**.
-6. La primera vez, acepta en la pantalla del televisor la autorización de depuración ADB. Confirma en el televisor; el instalador no puede aceptar ese diálogo por ti.
+1. Descarga `Instalador-NIVO-Android-v1.0.apk` e instálalo en tu teléfono Android. Si Android lo solicita, permite instalar aplicaciones desde el navegador o administrador de archivos.
+2. En Fire TV, abre **Configuración → Mi Fire TV → Acerca de** y pulsa varias veces el nombre del dispositivo para mostrar las opciones de desarrollador si aún no aparecen.
+3. En **Opciones para desarrolladores**, activa **Depuración ADB**.
+4. Conecta el teléfono y el Fire TV a la misma Wi‑Fi. Las redes de invitados pueden impedir que se detecten.
+5. Abre **Instalador NIVO**, toca **Buscar Fire TV en mi Wi‑Fi** y elige el televisor. Si no aparece, escribe la IP de **Mi Fire TV → Acerca de → Red**.
+6. Toca **Instalar NIVO**. La primera vez, acepta en la pantalla del televisor la autorización de depuración ADB.
 
-La aplicación verifica que el dispositivo sea un Amazon Fire TV antes de instalar. La instalación conserva los datos si ya existe una versión con la misma firma. El instalador configura el servicio de accesibilidad que NIVO necesita y abre NIVO al terminar.
+El instalador confirma que el dispositivo sea Amazon Fire TV, instala NIVO, prepara el servicio de accesibilidad y abre NIVO. No puede aceptar por ti el aviso de autorización que aparece en el televisor.
 
-## Crear el APK desde el código
+## Compilar desde el código fuente
 
-Requisitos: Android Studio o JDK 17, Android SDK Platform 35 y conexión a Internet para descargar dependencias de Gradle.
-
-En Windows PowerShell, desde la carpeta del proyecto:
+Requisitos: Android Studio o JDK 17, Android SDK Platform 35 y conexión a Internet para descargar las dependencias de Gradle. Descomprime el ZIP, abre la carpeta del proyecto en Android Studio o ejecuta en Windows PowerShell desde esa carpeta:
 
 ```powershell
 .\gradlew.bat assembleDebug
 ```
 
-El APK generado queda en:
+El APK se genera en `app\build\outputs\apk\debug\app-debug.apk`. Las rutas locales, las cachés y las llaves de firma privadas no se incluyen en el código fuente.
 
-```text
-app\build\outputs\apk\debug\app-debug.apk
-```
+## Versiones y prueba
 
-El proyecto usa la firma de depuración estándar de Android. `local.properties`, las claves de firma y los archivos de compilación locales no forman parte del repositorio.
-
-## Versiones
-
-- App instaladora: **1.0** (versionCode 1).
+- Instalador NIVO: **1.0** (versionCode 1).
 - NIVO incluido: **1.1**.
-- SHA-256 del APK publicado: ver `releases/SHA256SUMS.txt`.
+- El APK se compiló y verificó. No hubo un teléfono Android disponible para probar la conexión inalámbrica de extremo a extremo; la primera autorización ADB debe aceptarse en Fire TV.
 
-## Aviso de prueba
+## Licencia de terceros
 
-La compilación del instalador se completó correctamente y se comprobó el APK. Esta sesión no tuvo un teléfono Android disponible para una prueba real de conexión inalámbrica; el primer emparejamiento ADB requiere confirmar el aviso en el Fire TV.
-
-## Licencias
-
-La biblioteca `com.tananaev:adblib 1.3` está distribuida bajo BSD 3-Clause. El texto completo está en `app/src/main/assets/THIRD_PARTY_NOTICES.txt`.
+La biblioteca `com.tananaev:adblib 1.3` utiliza BSD 3-Clause. El aviso completo está en `app/src/main/assets/THIRD_PARTY_NOTICES.txt` dentro del ZIP del código fuente.
 
