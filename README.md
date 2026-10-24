@@ -1,11 +1,11 @@
-# NIIVO Fire TV Installer
+# Instalador NIIVO para Fire TV
 
-Instala o actualiza NIIVO en un Amazon Fire TV desde un teléfono Android conectado a la misma red Wi‑Fi. Incluye el APK de NIIVO 1.2. La versión 1.2 estrena una interfaz azul/morada con paneles de cristal y el launcher NIIVO actualizado.
+Instala o actualiza NIIVO en un Amazon Fire TV desde un teléfono Android conectado a la misma red Wi‑Fi. La versión 1.3 del instalador incluye NIIVO 1.2, con los iconos superiores del launcher renovados.
 
 ## Descargas
 
 - **Instalador para Android:** [NIIVO.apk](https://github.com/isaacguzmanr/NIIVO-Fire-TV-Installer/releases/latest/download/NIIVO.apk)
-- **Código fuente completo:** [NIIVO-Fire-TV-Installer-source-v1.2.zip](https://github.com/isaacguzmanr/NIIVO-Fire-TV-Installer/releases/latest/download/NIIVO-Fire-TV-Installer-source-v1.2.zip)
+- **Código fuente completo:** [NIIVO-Fire-TV-Installer-source-v1.3.zip](https://github.com/isaacguzmanr/NIIVO-Fire-TV-Installer/releases/latest/download/NIIVO-Fire-TV-Installer-source-v1.3.zip)
 - **Comprobaciones SHA-256:** [SHA256SUMS.txt](SHA256SUMS.txt)
 
 ## Instalar NIIVO desde el teléfono
@@ -27,16 +27,13 @@ Requisitos: Android Studio o JDK 17, Android SDK Platform 35 y conexión a Inter
 .\gradlew.bat assembleDebug
 ```
 
-El APK se genera en `app\build\outputs\apk\debug\app-debug.apk`. Las rutas locales, las cachés y las llaves de firma privadas no se incluyen en el código fuente.
+El APK de depuración se genera en `app\build\outputs\apk\debug\app-debug.apk`. Las rutas locales, las cachés y las llaves privadas de firma no se incluyen en el código fuente.
 
 ## Versiones
 
-- Instalador NIIVO: **1.2** (versionCode 3); interfaz renovada.
-- NIIVO incluido: **1.2**.
+- Instalador NIIVO: **1.3** (versionCode 4).
+- NIIVO incluido: **1.2** (versionCode 3).
 
 ## Licencia de terceros
 
 La biblioteca `com.tananaev:adblib 1.3` utiliza BSD 3-Clause. El aviso completo está en `app/src/main/assets/THIRD_PARTY_NOTICES.txt` dentro del ZIP del código fuente.
-Si ya tienes instalada la versión 1.0 del instalador, desinstálala antes de instalar la 1.2. Esta publicación está firmada con una clave distinta y Android no permite actualizar una app con otra firma; al reinstalar quizá debas volver a aceptar la autorización ADB en el Fire TV.
-
-
