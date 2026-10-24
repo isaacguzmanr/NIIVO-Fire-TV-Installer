@@ -37,3 +37,4 @@ El APK se genera en `app\build\outputs\apk\debug\app-debug.apk`. Las rutas local
 ## Licencia de terceros
 
 La biblioteca `com.tananaev:adblib 1.3` utiliza BSD 3-Clause. El aviso completo está en `app/src/main/assets/THIRD_PARTY_NOTICES.txt` dentro del ZIP del código fuente.
+Si ya tienes instalada la versión 1.0 del instalador, desinstálala antes de instalar la 1.1. Esta publicación está firmada con una clave distinta y Android no permite actualizar una app con otra firma; al reinstalar quizá debas volver a aceptar la autorización ADB en el Fire TV.

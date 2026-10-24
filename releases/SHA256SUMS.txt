@@ -1,2 +1,2 @@
 f3a7a16b8474dd19e19f48f9bf4569f214af7c2b5370bc1aaeef29d9cb73df91  Instalador-NIVO-Android-v1.1.apk
-f17a785b7e34bc32240a331ce9cd88b189790976a1f30f4e49371a3e6b410ef4  NIVO-Fire-TV-Installer-source-v1.1.zip
+8b315a21d0c09761d4d16c9bcc7ec515753a67f77afe87fec32e011813e7df5f  NIVO-Fire-TV-Installer-source-v1.1.zip
