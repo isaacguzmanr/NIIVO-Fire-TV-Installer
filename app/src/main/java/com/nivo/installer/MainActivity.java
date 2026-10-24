@@ -66,6 +66,7 @@ public final class MainActivity extends Activity {
     private TextView devices;
     private Button searchButton;
     private Button installButton;
+    private boolean uninstallMode;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -76,6 +77,128 @@ public final class MainActivity extends Activity {
     }
 
     private void buildUi() {
+        showHome();
+    }
+
+    private void showHome() {
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        scroll.setBackground(screenGradient());
+        LinearLayout page = new LinearLayout(this);
+        page.setOrientation(LinearLayout.VERTICAL);
+        page.setPadding(dp(22), dp(28), dp(22), dp(28));
+        scroll.addView(page);
+
+        LinearLayout brand = new LinearLayout(this);
+        brand.setGravity(Gravity.CENTER_VERTICAL);
+        ImageView mark = new ImageView(this);
+        mark.setImageResource(com.nivo.installer.R.drawable.nivo_logo);
+        mark.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        brand.addView(mark, new LinearLayout.LayoutParams(dp(38), dp(38)));
+        TextView wordmark = text("N I I V O", 17, WHITE, true);
+        wordmark.setLetterSpacing(0.18f);
+        LinearLayout.LayoutParams wordmarkLp = new LinearLayout.LayoutParams(-2, -2);
+        wordmarkLp.leftMargin = dp(10);
+        brand.addView(wordmark, wordmarkLp);
+        page.addView(brand);
+
+        TextView title = text(uninstallMode ? "Desinstalar NIIVO" : "Conecta tu Fire TV", 29, WHITE, true);
+        LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(-1, -2);
+        titleLp.topMargin = dp(30);
+        page.addView(title, titleLp);
+        TextView intro = text("Un Android TV más limpio y rápido.", 16, MUTED, false);
+        LinearLayout.LayoutParams introLp = new LinearLayout.LayoutParams(-1, -2);
+        introLp.topMargin = dp(8);
+        introLp.bottomMargin = dp(20);
+        page.addView(intro, introLp);
+
+        page.addView(actionCard("⬡", "Instalar", "Versión 1.4.0 · NIIVO", v -> { uninstallMode = false; buildInstallerPage(); }));
+        page.addView(actionCard("⟳", "Actualizar", "Buscar e instalar una versión nueva", v -> { uninstallMode = false; buildInstallerPage(); }));
+        page.addView(actionCard("▤", "Desinstalar", "Quitar NIIVO del Fire TV", v -> { uninstallMode = true; buildInstallerPage(); }));
+        page.addView(actionCard("⚙", "Configuración", "Ajustes y preferencias", v -> showSettings()));
+        TextView footer = text("Conecta tu teléfono y el Fire TV a la misma Wi‑Fi.", 13, MUTED, false);
+        footer.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams footerLp = new LinearLayout.LayoutParams(-1, -2);
+        footerLp.topMargin = dp(14);
+        page.addView(footer, footerLp);
+        setContentView(scroll);
+    }
+
+    private View actionCard(String icon, String title, String subtitle, View.OnClickListener click) {
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(14), dp(10), dp(14), dp(10));
+        row.setBackground(glassPanel(dp(19)));
+        LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(-1, dp(80));
+        rowLp.bottomMargin = dp(9);
+        row.setLayoutParams(rowLp);
+        TextView glyph = text(icon, 23, WHITE, true);
+        glyph.setGravity(Gravity.CENTER);
+        glyph.setBackground(round(0x4421385D, dp(28), 0x443D7EBE, dp(1)));
+        row.addView(glyph, new LinearLayout.LayoutParams(dp(52), dp(52)));
+        LinearLayout labels = new LinearLayout(this);
+        labels.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams labelsLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        labelsLp.leftMargin = dp(12);
+        row.addView(labels, labelsLp);
+        labels.addView(text(title, 16, WHITE, true));
+        TextView sub = text(subtitle, 13, MUTED, false);
+        LinearLayout.LayoutParams subLp = new LinearLayout.LayoutParams(-1, -2);
+        subLp.topMargin = dp(4);
+        labels.addView(sub, subLp);
+        row.addView(text("›", 28, MUTED, false));
+        row.setClickable(true);
+        row.setFocusable(true);
+        row.setOnClickListener(click);
+        return row;
+    }
+
+    private void showSettings() {
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        scroll.setBackground(screenGradient());
+        LinearLayout page = new LinearLayout(this);
+        page.setOrientation(LinearLayout.VERTICAL);
+        page.setPadding(dp(22), dp(26), dp(22), dp(28));
+        scroll.addView(page);
+        TextView back = text("‹   NIIVO", 18, WHITE, true);
+        back.setOnClickListener(v -> showHome());
+        page.addView(back);
+        TextView title = text("Configuración", 27, WHITE, true);
+        LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(-1, -2);
+        titleLp.topMargin = dp(28);
+        titleLp.bottomMargin = dp(18);
+        page.addView(title, titleLp);
+        page.addView(settingsCard("APLICACIÓN", "⌂", "Launcher predeterminado", "Se activa desde los ajustes de Fire TV"));
+        page.addView(settingsCard("INFORMACIÓN", "ⓘ", "Versión", "1.4.0"));
+        page.addView(settingsCard("INFORMACIÓN", "▤", "Acerca de NIIVO", "Instalador para Amazon Fire TV"));
+        setContentView(scroll);
+    }
+
+    private View settingsCard(String section, String icon, String title, String subtitle) {
+        LinearLayout card = new LinearLayout(this);
+        card.setGravity(Gravity.CENTER_VERTICAL);
+        card.setPadding(dp(14), dp(12), dp(14), dp(12));
+        card.setBackground(glassPanel(dp(18)));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(78));
+        lp.bottomMargin = dp(10);
+        card.setLayoutParams(lp);
+        TextView glyph = text(icon, 22, WHITE, true);
+        card.addView(glyph, new LinearLayout.LayoutParams(dp(36), -2));
+        LinearLayout labels = new LinearLayout(this);
+        labels.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams labelsLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        labelsLp.leftMargin = dp(10);
+        card.addView(labels, labelsLp);
+        labels.addView(text(section, 10, CYAN, true));
+        TextView heading = text(title, 15, WHITE, true);
+        LinearLayout.LayoutParams hLp = new LinearLayout.LayoutParams(-1, -2);
+        hLp.topMargin = dp(3);
+        labels.addView(heading, hLp);
+        labels.addView(text(subtitle, 12, MUTED, false));
+        return card;
+    }
+    private void buildInstallerPage() {
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
         scroll.setBackground(screenGradient());
@@ -83,6 +206,11 @@ public final class MainActivity extends Activity {
         page.setOrientation(LinearLayout.VERTICAL);
         page.setPadding(dp(22), dp(25), dp(22), dp(28));
         scroll.addView(page);
+
+        TextView back = text("‹   Volver", 15, WHITE, true);
+        back.setPadding(0, 0, 0, dp(10));
+        back.setOnClickListener(v -> showHome());
+        page.addView(back);
 
         LinearLayout brand = new LinearLayout(this);
         brand.setGravity(Gravity.CENTER_VERTICAL);
@@ -97,13 +225,13 @@ public final class MainActivity extends Activity {
         brand.addView(wordmark, wordmarkLp);
         page.addView(brand);
 
-        TextView title = text("Launcher listo\npara instalar", 29, WHITE, true);
+        TextView title = text(uninstallMode ? "Desinstalar NIIVO" : "Conecta tu Fire TV", 29, WHITE, true);
         title.setLineSpacing(dp(1), 1f);
         LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(-1, -2);
         titleLp.topMargin = dp(34);
         page.addView(title, titleLp);
 
-        TextView intro = text("Un Fire TV más limpio y rápido.", 16, MUTED, false);
+        TextView intro = text(uninstallMode ? "Conecta tu TV para retirar NIIVO." : "Sigue estos pasos para instalarlo.", 16, MUTED, false);
         intro.setLineSpacing(dp(3), 1f);
         LinearLayout.LayoutParams introLp = new LinearLayout.LayoutParams(-1, -2);
         introLp.topMargin = dp(8);
@@ -149,7 +277,7 @@ public final class MainActivity extends Activity {
         ipLp.topMargin = dp(8);
         page.addView(ipInput, ipLp);
 
-        installButton = button("Instalar NIIVO", true);
+        installButton = button(uninstallMode ? "Desinstalar NIIVO" : "Instalar NIIVO", true);
         installButton.setEnabled(false);
         installButton.setAlpha(0.48f);
         LinearLayout.LayoutParams installLp = new LinearLayout.LayoutParams(-1, dp(56));
@@ -285,19 +413,23 @@ public final class MainActivity extends Activity {
                 if (!deviceLower.contains("amazon") && !deviceLower.contains("aft")) {
                     throw new IOException("El dispositivo " + host + " no se identificó como Fire TV. No instalé nada. " + clean(deviceInfo));
                 }
-                runOnUiThread(() -> status.setText("Fire TV reconocido. Copiando NIIVO… no cierres la app."));
-                pushApk(active);
-                runOnUiThread(() -> status.setText("APK copiado. Instalando NIIVO y preparando el botón Inicio…"));
-                String install = runShell(active, "pm install -r -g /data/local/tmp/nivo.apk");
-                if (!install.contains("Success")) {
-                    throw new IOException("La TV no aceptó la instalación. " + clean(install));
+                if (uninstallMode) {
+                    runOnUiThread(() -> status.setText("Fire TV reconocido. Quitando NIIVO…"));
+                    String result = runShell(active, "pm uninstall " + FIRE_PACKAGE);
+                    if (!result.contains("Success")) throw new IOException("No se pudo desinstalar NIIVO. " + clean(result));
+                } else {
+                    runOnUiThread(() -> status.setText("Fire TV reconocido. Copiando NIIVO… no cierres la app."));
+                    pushApk(active);
+                    runOnUiThread(() -> status.setText("APK copiado. Instalando NIIVO y preparando el botón Inicio…"));
+                    String install = runShell(active, "pm install -r -g /data/local/tmp/nivo.apk");
+                    if (!install.contains("Success")) throw new IOException("La TV no aceptó la instalación. " + clean(install));
+                    runShell(active, "settings put secure enabled_accessibility_services " + ACCESSIBILITY
+                            + "; settings put secure accessibility_enabled 1"
+                            + "; am start -n " + FIRE_PACKAGE + "/.HomeActivity");
                 }
-                runShell(active, "settings put secure enabled_accessibility_services " + ACCESSIBILITY
-                        + "; settings put secure accessibility_enabled 1"
-                        + "; am start -n " + FIRE_PACKAGE + "/.HomeActivity");
                 runOnUiThread(() -> {
-                    status.setText("¡NIIVO quedó instalado! El dock, la imagen y la configuración se conservan si ya estaban en esa TV.");
-                    devices.setText("Instalación terminada en " + host + ". Ya puedes volver al Inicio del Fire TV.");
+                    status.setText(uninstallMode ? "NIIVO se desinstaló del Fire TV." : "¡NIIVO quedó instalado! El dock, la imagen y la configuración se conservan si ya estaban en esa TV.");
+                    devices.setText((uninstallMode ? "Desinstalación" : "Instalación") + " terminada en " + host + ".");
                     searchButton.setEnabled(true);
                 });
             } catch (Exception ex) {
@@ -431,8 +563,8 @@ public final class MainActivity extends Activity {
 
     private Button button(String label, boolean primary) {
         Button b=new Button(this); b.setText(label); b.setAllCaps(false); b.setTextSize(16); b.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        b.setTextColor(primary?BG:WHITE);
-        b.setBackground(round(primary?CYAN:Color.rgb(24,42,57),dp(14),primary?CYAN:Color.rgb(51,77,95),dp(1)));
+        b.setTextColor(WHITE);
+        b.setBackground(primary?gradientButton(dp(16)):glassPanel(dp(14)));
         b.setEnabled(primary);
         b.setAlpha(primary?1f:0.48f);
         b.setOnTouchListener((v,e)->{ if(!b.isEnabled())return false; if(e.getAction()==android.view.MotionEvent.ACTION_DOWN)b.setAlpha(0.78f); if(e.getAction()==android.view.MotionEvent.ACTION_UP||e.getAction()==android.view.MotionEvent.ACTION_CANCEL)b.setAlpha(1f); return false;});
