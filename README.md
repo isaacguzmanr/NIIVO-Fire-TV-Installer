@@ -4,8 +4,8 @@ Instala o actualiza NIIVO en un Amazon Fire TV desde un teléfono Android conect
 
 ## Descargas
 
-- **Instalador para Android:** [NIIVO.apk](https://github.com/isaacguzmanr/NIIVO-Fire-TV-Installer/releases/latest/download/NIIVO.apk)
-- **Código fuente completo:** [NIIVO-Fire-TV-Installer-source-v1.3.zip](https://github.com/isaacguzmanr/NIIVO-Fire-TV-Installer/releases/latest/download/NIIVO-Fire-TV-Installer-source-v1.3.zip)
+- **Instalador para Android:** [NIIVO.apk](https://github.com/isaacguzmanr/NIIVO-Fire-TV-Installer/releases/download/v1.3/NIIVO.apk)
+- **Código fuente completo:** [NIIVO-Fire-TV-Installer-source-v1.3.zip](https://github.com/isaacguzmanr/NIIVO-Fire-TV-Installer/releases/download/v1.3/NIIVO-Fire-TV-Installer-source-v1.3.zip)
 - **Comprobaciones SHA-256:** [SHA256SUMS.txt](https://github.com/isaacguzmanr/NIVO-Fire-TV-Installer/releases/download/v1.3/SHA256SUMS.txt)
 
 ## Instalar NIIVO desde el teléfono
