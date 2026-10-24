@@ -50,9 +50,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public final class MainActivity extends Activity {
-    private static final int BG = Color.rgb(5, 11, 20);
-    private static final int PANEL = Color.rgb(14, 27, 42);
-    private static final int CYAN = Color.rgb(36, 215, 211);
+    private static final int BG = Color.rgb(7, 26, 43);
+    private static final int PANEL = Color.rgb(13, 24, 48);
+    private static final int CYAN = Color.rgb(29, 190, 255);
+    private static final int BLUE = Color.rgb(18, 111, 255);
+    private static final int PURPLE = Color.rgb(126, 28, 255);
     private static final int WHITE = Color.rgb(244, 248, 252);
     private static final int MUTED = Color.rgb(171, 187, 203);
     private static final String FIRE_PACKAGE = "com.ivantrj.glasslauncher";
@@ -76,38 +78,41 @@ public final class MainActivity extends Activity {
     private void buildUi() {
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
-        scroll.setBackgroundColor(BG);
+        scroll.setBackground(screenGradient());
         LinearLayout page = new LinearLayout(this);
         page.setOrientation(LinearLayout.VERTICAL);
-        page.setPadding(dp(24), dp(24), dp(24), dp(28));
+        page.setPadding(dp(22), dp(25), dp(22), dp(28));
         scroll.addView(page);
 
-        ImageView logo = new ImageView(this);
-        logo.setImageResource(com.nivo.installer.R.drawable.nivo_logo);
-        logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        LinearLayout logoRow = new LinearLayout(this);
-        logoRow.setGravity(Gravity.CENTER);
-        logoRow.addView(logo, new LinearLayout.LayoutParams(dp(112), dp(112)));
-        page.addView(logoRow);
+        LinearLayout brand = new LinearLayout(this);
+        brand.setGravity(Gravity.CENTER_VERTICAL);
+        ImageView mark = new ImageView(this);
+        mark.setImageResource(com.nivo.installer.R.drawable.nivo_logo);
+        mark.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        brand.addView(mark, new LinearLayout.LayoutParams(dp(42), dp(42)));
+        TextView wordmark = text("N I I V O", 17, WHITE, true);
+        wordmark.setLetterSpacing(0.18f);
+        LinearLayout.LayoutParams wordmarkLp = new LinearLayout.LayoutParams(-2, -2);
+        wordmarkLp.leftMargin = dp(12);
+        brand.addView(wordmark, wordmarkLp);
+        page.addView(brand);
 
-        TextView title = text("Instalador NIVO", 27, WHITE, true);
-        title.setGravity(Gravity.CENTER);
+        TextView title = text("Launcher listo\npara instalar", 29, WHITE, true);
+        title.setLineSpacing(dp(1), 1f);
         LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(-1, -2);
-        titleLp.topMargin = dp(8);
+        titleLp.topMargin = dp(34);
         page.addView(title, titleLp);
 
-        TextView intro = text("Instala o actualiza NIVO en tu Fire TV desde este teléfono.", 15, MUTED, false);
-        intro.setGravity(Gravity.CENTER);
+        TextView intro = text("Un Fire TV más limpio y rápido.", 16, MUTED, false);
         intro.setLineSpacing(dp(3), 1f);
         LinearLayout.LayoutParams introLp = new LinearLayout.LayoutParams(-1, -2);
-        introLp.topMargin = dp(7);
-        introLp.bottomMargin = dp(18);
+        introLp.topMargin = dp(8);
+        introLp.bottomMargin = dp(22);
         page.addView(intro, introLp);
-
         LinearLayout help = new LinearLayout(this);
         help.setOrientation(LinearLayout.VERTICAL);
-        help.setPadding(dp(16), dp(15), dp(16), dp(15));
-        help.setBackground(round(PANEL, dp(16), Color.rgb(29, 56, 75), dp(1)));
+        help.setPadding(dp(17), dp(16), dp(17), dp(16));
+        help.setBackground(glassPanel(dp(18)));
         help.addView(text("ANTES DE EMPEZAR", 12, CYAN, true));
         TextView steps = text("1. En Fire TV, activa Depuración ADB.\n2. Conecta teléfono y TV a la misma Wi‑Fi.\n3. Si aparece el aviso, permite la depuración ADB en la TV.", 14, WHITE, false);
         steps.setLineSpacing(dp(4), 1f);
@@ -116,7 +121,7 @@ public final class MainActivity extends Activity {
         help.addView(steps, stepsLp);
         page.addView(help);
 
-        searchButton = button("Buscar Fire TV en mi Wi‑Fi", true);
+        searchButton = button("Buscar Fire TV en mi Wi‑Fi", false);
         LinearLayout.LayoutParams searchLp = new LinearLayout.LayoutParams(-1, dp(54));
         searchLp.topMargin = dp(18);
         page.addView(searchButton, searchLp);
@@ -139,12 +144,14 @@ public final class MainActivity extends Activity {
         ipInput.setTextSize(14);
         ipInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_URI);
         ipInput.setPadding(dp(14), 0, dp(14), 0);
-        ipInput.setBackground(round(Color.rgb(16, 30, 44), dp(12), Color.rgb(45, 68, 84), dp(1)));
+        ipInput.setBackground(glassPanel(dp(14)));
         LinearLayout.LayoutParams ipLp = new LinearLayout.LayoutParams(-1, dp(52));
         ipLp.topMargin = dp(8);
         page.addView(ipInput, ipLp);
 
-        installButton = button("Instalar NIVO", false);
+        installButton = button("Instalar NIIVO", true);
+        installButton.setEnabled(false);
+        installButton.setAlpha(0.48f);
         LinearLayout.LayoutParams installLp = new LinearLayout.LayoutParams(-1, dp(56));
         installLp.topMargin = dp(14);
         page.addView(installButton, installLp);
@@ -157,7 +164,7 @@ public final class MainActivity extends Activity {
             @Override public void afterTextChanged(Editable e) {}
         });        installButton.setOnClickListener(v -> installSelected());
 
-        status = text("El APK de NIVO va incluido en esta app; no hace falta descargarlo aparte.", 13, MUTED, false);
+        status = text("El APK de NIIVO va incluido en esta app; no hace falta descargarlo aparte.", 13, MUTED, false);
         status.setGravity(Gravity.CENTER);
         status.setPadding(dp(4), dp(12), dp(4), 0);
         page.addView(status);
@@ -278,9 +285,9 @@ public final class MainActivity extends Activity {
                 if (!deviceLower.contains("amazon") && !deviceLower.contains("aft")) {
                     throw new IOException("El dispositivo " + host + " no se identificó como Fire TV. No instalé nada. " + clean(deviceInfo));
                 }
-                runOnUiThread(() -> status.setText("Fire TV reconocido. Copiando NIVO… no cierres la app."));
+                runOnUiThread(() -> status.setText("Fire TV reconocido. Copiando NIIVO… no cierres la app."));
                 pushApk(active);
-                runOnUiThread(() -> status.setText("APK copiado. Instalando NIVO y preparando el botón Inicio…"));
+                runOnUiThread(() -> status.setText("APK copiado. Instalando NIIVO y preparando el botón Inicio…"));
                 String install = runShell(active, "pm install -r -g /data/local/tmp/nivo.apk");
                 if (!install.contains("Success")) {
                     throw new IOException("La TV no aceptó la instalación. " + clean(install));
@@ -289,7 +296,7 @@ public final class MainActivity extends Activity {
                         + "; settings put secure accessibility_enabled 1"
                         + "; am start -n " + FIRE_PACKAGE + "/.HomeActivity");
                 runOnUiThread(() -> {
-                    status.setText("¡NIVO quedó instalado! El dock, la imagen y la configuración se conservan si ya estaban en esa TV.");
+                    status.setText("¡NIIVO quedó instalado! El dock, la imagen y la configuración se conservan si ya estaban en esa TV.");
                     devices.setText("Instalación terminada en " + host + ". Ya puedes volver al Inicio del Fire TV.");
                     searchButton.setEnabled(true);
                 });
@@ -358,7 +365,7 @@ public final class MainActivity extends Activity {
             String id = new String(reader.read(4), StandardCharsets.US_ASCII);
             int length = reader.readInt();
             if ("FAIL".equals(id)) throw new IOException("No se pudo copiar el APK: " + new String(reader.read(length), StandardCharsets.UTF_8));
-            if (!"OKAY".equals(id)) throw new IOException("Respuesta inesperada al copiar NIVO: " + id);
+            if (!"OKAY".equals(id)) throw new IOException("Respuesta inesperada al copiar NIIVO: " + id);
         } finally { try { stream.close(); } catch (Exception ignored) {} }
     }
 
@@ -435,6 +442,25 @@ public final class MainActivity extends Activity {
     private GradientDrawable round(int color,int radius,int stroke,int strokeWidth) {
         GradientDrawable d=new GradientDrawable(); d.setColor(color); d.setCornerRadius(radius); d.setStroke(strokeWidth,stroke); return d;
     }
-    private int dp(float value) { return (int)(value*getResources().getDisplayMetrics().density+0.5f); }
+    private GradientDrawable screenGradient() {
+        return new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{0xFF06111D, 0xFF071A2B, 0xFF10144B, 0xFF24134A});
+    }
+    private GradientDrawable glassPanel(int radius) {
+        GradientDrawable d = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{0xCC10233C, 0xCC15183D, 0xCC24134A});
+        d.setCornerRadius(radius);
+        d.setStroke(dp(1), 0x663A6AA6);
+        return d;
+    }
+    private GradientDrawable gradientButton(int radius) {
+        GradientDrawable d = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
+                new int[]{CYAN, BLUE, PURPLE});
+        d.setCornerRadius(radius);
+        d.setStroke(dp(1), 0x6664D9FF);
+        return d;
+    }    private int dp(float value) { return (int)(value*getResources().getDisplayMetrics().density+0.5f); }
     @Override protected void onDestroy() { super.onDestroy(); /* executor is intentionally process-scoped for pending ADB I/O */ }
 }
+
+
