@@ -1,28 +1,29 @@
 # Instalador NIIVO para Fire TV
 
-Instala, actualiza o quita NIIVO en un Amazon Fire TV desde un teléfono Android. El instalador 1.4.0 estrena una interfaz azul y violeta más limpia, con accesos separados para instalar, actualizar, desinstalar y configuración.
+Instala, actualiza o quita NIIVO en un Amazon Fire TV desde un teléfono Android. Esta beta pública incluye NIIVO **2.0.0-beta.1** y el instalador Android actualizado.
 
 ## Descargas
 
-- **Instalador Android 1.4.2:** [NIIVO-Installer-v1.4.2.apk](https://github.com/isaacguzmanr/NIVO-Fire-TV-Installer/releases/download/1.4.2/NIIVO-Installer-v1.4.2.apk)
+- **Instalador Android 1.5.0-beta.1:** [NIIVO-Installer-v1.5.0-beta.1.apk](https://github.com/isaacguzmanr/NIVO-Fire-TV-Installer/releases/download/v2.0.0-beta.1/NIIVO-Installer-v1.5.0-beta.1.apk)
+- **Launcher NIIVO 2.0.0-beta.1:** [NIIVO-2.0.0-beta.1.apk](https://github.com/isaacguzmanr/NIVO-Fire-TV-Installer/releases/download/v2.0.0-beta.1/NIIVO-2.0.0-beta.1.apk)
+- **SHA-256 del launcher:** [NIIVO-2.0.0-beta.1-SHA256SUMS.txt](https://github.com/isaacguzmanr/NIVO-Fire-TV-Installer/releases/download/v2.0.0-beta.1/NIIVO-2.0.0-beta.1-SHA256SUMS.txt)
+- **SHA-256 del instalador:** [NIIVO-Installer-v1.5.0-beta.1-SHA256SUMS.txt](https://github.com/isaacguzmanr/NIVO-Fire-TV-Installer/releases/download/v2.0.0-beta.1/NIIVO-Installer-v1.5.0-beta.1-SHA256SUMS.txt)
 - **Código fuente:** [Descargar ZIP de main](https://github.com/isaacguzmanr/NIVO-Fire-TV-Installer/archive/refs/heads/main.zip)
-- **SHA-256:** [NIIVO-Installer-v1.4.0-SHA256SUMS.txt](https://github.com/isaacguzmanr/NIVO-Fire-TV-Installer/raw/refs/heads/main/releases/NIIVO-Installer-v1.4.0-SHA256SUMS.txt)
 
 ## Instalar NIIVO desde el teléfono
 
-1. Descarga e instala el APK en un teléfono Android.
-2. En Fire TV, abre **Configuración → Mi Fire TV → Acerca de** y pulsa varias veces el nombre del dispositivo para mostrar las opciones de desarrollador si aún no aparecen.
-3. En **Opciones para desarrolladores**, activa **Depuración ADB**.
-4. Conecta el teléfono y el Fire TV a la misma Wi-Fi.
-5. Abre **Instalador NIIVO**, elige **Instalar** o **Actualizar** y busca el dispositivo. Si no aparece, escribe la IP de **Mi Fire TV → Acerca de → Red**.
-6. Acepta en el televisor el aviso de autorización ADB.
+1. Descarga e instala el APK del Instalador NIIVO en un teléfono Android.
+2. En Fire TV, activa **Depuración ADB** en las opciones para desarrolladores.
+3. Conecta el teléfono y el Fire TV a la misma Wi-Fi.
+4. Abre **Instalador NIIVO**, elige **Instalar** o **Actualizar** y busca el dispositivo. Si no aparece, escribe la IP de **Mi Fire TV → Acerca de → Red**.
+5. Acepta en el televisor el aviso de autorización ADB.
 
-El instalador confirma que el dispositivo sea Amazon Fire TV, instala NIIVO, prepara el servicio de accesibilidad que redirige el botón Inicio y abre NIIVO. No puede aceptar por ti el aviso que aparece en el televisor.
+El instalador detecta Fire TV, instala NIIVO, configura el servicio de accesibilidad que redirige el botón Inicio y abre el launcher. No puede aceptar por ti el aviso ADB del televisor.
 
 ## Versiones
 
-- Instalador NIIVO: **1.4.0** (versionCode 5).
-- NIIVO incluido: **1.2** (versionCode 3).
+- Instalador NIIVO: **1.5.0-beta.1** (versionCode 9).
+- NIIVO incluido: **2.0.0-beta.1** (versionCode 5).
 
 ## Licencia de terceros
 

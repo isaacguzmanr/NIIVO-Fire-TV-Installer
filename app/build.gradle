@@ -7,8 +7,8 @@ android {
         applicationId 'com.nivo.installer'
         minSdk 26
         targetSdk 35
-        versionCode 5
-        versionName '1.4.0'
+        versionCode 9
+        versionName '1.5.0-beta.1'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
