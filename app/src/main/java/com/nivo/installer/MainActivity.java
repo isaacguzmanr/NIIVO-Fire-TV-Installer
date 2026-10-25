@@ -393,7 +393,7 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
                 installedTvVersion = installed;
             } catch (Exception ex) {
                 if (connection != null) try { connection.close(); } catch (Exception ignored) {}
-                showUpdateError("No se pudo comprobar", "No se pudo leer la versión instalada en el Fire TV. Comprueba ADB y vuelve a intentarlo.", host);
+                showUpdateError("No se pudo comprobar", "No se pudo leer la versión instalada en el Fire TV. Comprueba ADB y vuelve a intentarlo.", host, true);
                 return;
             } finally {
                 if (connection != null) try { connection.close(); } catch (Exception ignored) {}
@@ -403,7 +403,7 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
                 runOnUiThread(() -> presentUpdateCheck(check, host));
             } catch (Exception ex) {
                 String detail = updateFailureMessage(ex);
-                runOnUiThread(() -> showUpdateError("No se pudo comprobar", detail, host));
+                runOnUiThread(() -> showUpdateError("No se pudo comprobar", detail, host, false));
             }
         });
     }
@@ -412,10 +412,15 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
         Throwable cause = error;
         while (cause != null) {
             if (cause instanceof java.net.UnknownHostException || cause instanceof java.net.ConnectException || cause instanceof java.net.NoRouteToHostException)
-                return "Comprueba tu conexión a Internet e inténtalo nuevamente.";
+                return "No hay conexión con GitHub. Comprueba que el teléfono tenga Internet e inténtalo nuevamente.";
+            if (cause instanceof IOException && cause.getMessage() != null && !cause.getMessage().trim().isEmpty())
+                return cause.getMessage();
             cause = cause.getCause();
         }
-        return "No fue posible conectar con el servidor de actualizaciones.";
+        String message = error.getMessage();
+        return message == null || message.trim().isEmpty()
+                ? "No fue posible consultar las actualizaciones de NIIVO en GitHub."
+                : "No fue posible consultar GitHub: " + message;
     }
 
     private void presentUpdateCheck(UpdateManager.ReleaseCheck check, String host) {
@@ -468,14 +473,27 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
         retry.setOnClickListener(v -> checkUpdates(host)); retry.requestFocus();
     }
 
-    private void showUpdateError(String title, String detail, String host) {
+    private void showUpdateError(String title, String detail, String host, boolean fireTvConnectionProblem) {
         runOnUiThread(() -> {
             if (!updatesScreenVisible) return;
             LinearLayout page = updatesPage("Comprueba si tienes la última versión de NIIVO.");
             page.addView(settingsCard(7, title, detail, false, v -> {}), updateCardLayout(dp(112), 18));
+            if (fireTvConnectionProblem) {
+                TextView help = text("Comprueba que Fire TV y el teléfono estén en la misma Wi‑Fi, activa Depuración ADB en la TV y acepta el aviso de autorización.", 14, MUTED, false);
+                help.setPadding(dp(10), 0, dp(8), dp(14));
+                page.addView(help);
+            }
             Button retry = button("Reintentar", true);
-            page.addView(retry, updateCardLayout(dp(58), 0));
-            retry.setOnClickListener(v -> checkUpdates(host)); retry.requestFocus();
+            page.addView(retry, updateCardLayout(dp(58), fireTvConnectionProblem ? 8 : 0));
+            retry.setOnClickListener(v -> checkUpdates(host));
+            if (fireTvConnectionProblem) {
+                Button reconnect = button("Conectar o cambiar IP", false);
+                page.addView(reconnect, updateCardLayout(dp(58), 0));
+                reconnect.setOnClickListener(v -> showUpdateHostDialog());
+                reconnect.requestFocus();
+            } else {
+                retry.requestFocus();
+            }
         });
     }
 
@@ -522,10 +540,10 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
                 runOnUiThread(() -> showUpdateDone(release.version));
             } catch (Exception ex) {
                 updateOperationRunning = false;
-                if (cancelRequested) runOnUiThread(() -> showUpdateError("Actualización cancelada", "No se completó la actualización.", host));
+                if (cancelRequested) runOnUiThread(() -> showUpdateError("Actualización cancelada", "No se completó la actualización.", host, false));
                 else {
                     String detail = ex.getMessage() == null ? "No se pudo completar la actualización." : ex.getMessage();
-                    runOnUiThread(() -> showUpdateError("No se pudo actualizar", detail, host));
+                    runOnUiThread(() -> showUpdateError("No se pudo actualizar", detail, host, true));
                 }
             }
         });
