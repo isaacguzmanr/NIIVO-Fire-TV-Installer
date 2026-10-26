@@ -189,109 +189,106 @@ public final class MainActivity extends Activity {
         settingsScreenVisible = false;
         settingsDetailVisible = false;
         installerScreenVisible = false;
+        boolean compact = getResources().getConfiguration().screenWidthDp < 360
+                || getResources().getConfiguration().fontScale >= 1.2f;
         LinearLayout page = newPage();
         page.setBackground(homeGradient());
-        page.setPadding(dp(18), dp(78), dp(16), dp(24));
+        page.setPadding(dp(18), 0, dp(16), dp(20));
+        View pageScroller = (View) page.getParent();
+        if (pageScroller instanceof ScrollView) {
+            ((ScrollView) pageScroller).setClipToPadding(true);
+            pageScroller.setOnApplyWindowInsetsListener((view, insets) -> {
+                view.setPadding(0, insets.getSystemWindowInsetTop(), 0, insets.getSystemWindowInsetBottom());
+                return insets;
+            });
+            pageScroller.requestApplyInsets();
+        }
         LinearLayout brand = new LinearLayout(this);
         brand.setGravity(Gravity.CENTER_VERTICAL);
         brand.setPadding(dp(12), 0, 0, 0);
         View mark = new NivoMarkView(this);
-        brand.addView(mark, new LinearLayout.LayoutParams(dp(52), dp(52)));
+        int markSize = compact ? 42 : 52;
+        brand.addView(mark, new LinearLayout.LayoutParams(dp(markSize), dp(markSize)));
         LinearLayout brandWords = new LinearLayout(this);
         brandWords.setOrientation(LinearLayout.VERTICAL);
         LinearLayout.LayoutParams brandWordsLp = new LinearLayout.LayoutParams(-2, -2);
-        brandWordsLp.leftMargin = dp(17);
+        brandWordsLp.leftMargin = dp(compact ? 10 : 17);
         brand.addView(brandWords, brandWordsLp);
-        TextView name = text("NIIVO", 32, WHITE, true);
-        name.setLetterSpacing(0.15f);
+        TextView name = text("NIIVO", compact ? 24 : 32, WHITE, true);
+        name.setLetterSpacing(compact ? 0.07f : 0.15f);
         brandWords.addView(name);
-        TextView launcher = text("L A U N C H E R", 11, MUTED, false);
-        launcher.setLetterSpacing(0.12f);
+        TextView launcher = text(compact ? "LAUNCHER" : "L A U N C H E R", compact ? 8 : 11, MUTED, false);
+        launcher.setLetterSpacing(compact ? 0.10f : 0.12f);
         brandWords.addView(launcher);
         View spacer = new View(this);
         brand.addView(spacer, new LinearLayout.LayoutParams(0, 1, 1f));
-        TextView version = text(getEmbeddedLauncherVersion().replace("Versión ", "v"), 12, MUTED, false);
+        TextView version = text(getInstallerVersion().replace("Versión ", "v"), compact ? 10 : 12, MUTED, false);
         version.setGravity(Gravity.CENTER);
         version.setSingleLine(true);
-        version.setPadding(dp(10), 0, dp(10), 0);
+        version.setPadding(dp(compact ? 7 : 10), 0, dp(compact ? 7 : 10), 0);
         version.setBackground(round(0xD0071429, dp(22), 0x80344BC6, dp(1)));
-        LinearLayout.LayoutParams versionLp = new LinearLayout.LayoutParams(-2, dp(34));
+        LinearLayout.LayoutParams versionLp = new LinearLayout.LayoutParams(-2, dp(compact ? 30 : 34));
         brand.addView(version, versionLp);
-        FrameLayout settings = new FrameLayout(this);
-        settings.setForegroundGravity(Gravity.CENTER);
-        settings.setContentDescription("Configuración");
-        settings.setBackgroundColor(Color.TRANSPARENT);
-        settings.setFocusable(true);
-        settings.setClickable(true);
-        settings.setOnClickListener(v -> showSettings());
-        ActionIconView settingsGlyph = new ActionIconView(this, 3);
-        View settingsDisc = new View(this);
-        settingsDisc.setBackground(round(0x55200D45, dp(20), 0x222D7CE6, dp(1)));
-        settings.addView(settingsDisc, new FrameLayout.LayoutParams(dp(34), dp(34), Gravity.CENTER));
-        FrameLayout.LayoutParams settingsGlyphLp = new FrameLayout.LayoutParams(dp(26), dp(26), Gravity.CENTER);
-        settings.addView(settingsGlyph, settingsGlyphLp);
-        LinearLayout.LayoutParams settingsLp = new LinearLayout.LayoutParams(dp(40), dp(40));
-        settingsLp.leftMargin = dp(4);
-        brand.addView(settings, settingsLp);
         page.addView(brand);
 
         TextView tagline = text("Tu Fire TV, a tu manera.", 16, MUTED, false);
         LinearLayout.LayoutParams taglineLp = new LinearLayout.LayoutParams(-1, -2);
-        taglineLp.topMargin = dp(5);
-        taglineLp.bottomMargin = dp(33);
+        taglineLp.topMargin = dp(12);
+        taglineLp.bottomMargin = dp(23);
         tagline.setPadding(dp(10), 0, 0, 0);
         tagline.setTextSize(15);
         tagline.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.ITALIC));
         page.addView(tagline, taglineLp);
-        page.addView(mainMenuCard(9, "Instalar", "Instala la última versión de NIIVO\nen tu dispositivo.", true,
+        page.addView(mainMenuCard(9, "Instalar", "Instala NIIVO en tu Fire TV.", true, compact,
                 v -> { uninstallMode = false; buildInstallerPage(); }));
-        page.addView(mainMenuCard(1, "Actualizar", "Comprueba si tienes una nueva\nversión disponible.", false,
+        page.addView(mainMenuCard(1, "Actualizar", "Busca actualizaciones de NIIVO.", false, compact,
                 v -> showUpdates()));
-        page.addView(mainMenuCard(3, "Configuración", "Personaliza NIIVO a tu gusto.", false,
+        page.addView(mainMenuCard(3, "Configuración", "Ajusta las opciones de NIIVO.", false, compact,
                 v -> showSettings()));
-        page.addView(mainMenuCard(2, "Desinstalar", "Elimina NIIVO de tu dispositivo.", false,
+        page.addView(mainMenuCard(2, "Desinstalar", "Elimina NIIVO de tu Fire TV.", false, compact,
                 v -> { uninstallMode = true; buildInstallerPage(); }));
     }
 
-    private View mainMenuCard(int icon, String title, String subtitle, boolean featured,
+    private View mainMenuCard(int icon, String title, String subtitle, boolean featured, boolean compact,
                               View.OnClickListener click) {
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(16), dp(8), dp(11), dp(8));
-        row.setBackground(featured ? installerCardPanel(dp(16)) : glassPanel(dp(15)));
-        int cardHeight = featured ? 102 : title.equals("Actualizar") ? 94 : 90;
-        LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(-1, dp(cardHeight));
-        rowLp.bottomMargin = featured ? dp(18) : title.equals("Desinstalar") ? 0 : dp(10);
+        row.setPadding(dp(compact ? 10 : 14), dp(compact ? 11 : 13), dp(compact ? 9 : 12), dp(compact ? 11 : 13));
+        row.setBackground(featured ? installerCardPanel(dp(18)) : glassPanel(dp(18)));
+        row.setMinimumHeight(dp(compact ? 84 : 92));
+        LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(-1, -2);
+        rowLp.bottomMargin = dp(12);
         row.setLayoutParams(rowLp);
 
-        int iconSize = icon == 9 ? 56 : icon == 1 ? 56 : icon == 2 ? 60 : 46;
         ActionIconView iconView = new ActionIconView(this, icon);
         iconView.setContentDescription(title);
         LinearLayout iconBox = new LinearLayout(this);
         iconBox.setGravity(Gravity.CENTER);
+        int iconSize = compact ? 34 : 40;
         iconBox.addView(iconView, new LinearLayout.LayoutParams(dp(iconSize), dp(iconSize)));
-        row.addView(iconBox, new LinearLayout.LayoutParams(dp(70), dp(66)));
+        row.addView(iconBox, new LinearLayout.LayoutParams(dp(compact ? 42 : 50), dp(compact ? 48 : 54)));
         View divider = new View(this);
         divider.setBackgroundColor(featured ? 0xB5228BFF : 0x55337BB8);
-        LinearLayout.LayoutParams dividerLp = new LinearLayout.LayoutParams(dp(1), dp(featured ? 62 : 54));
-        dividerLp.leftMargin = dp(8);
-        dividerLp.rightMargin = dp(18);
+        LinearLayout.LayoutParams dividerLp = new LinearLayout.LayoutParams(dp(1), dp(compact ? 46 : 52));
+        dividerLp.leftMargin = dp(compact ? 6 : 8);
+        dividerLp.rightMargin = dp(compact ? 8 : 13);
         row.addView(divider, dividerLp);
 
         LinearLayout labels = new LinearLayout(this);
         labels.setOrientation(LinearLayout.VERTICAL);
         LinearLayout.LayoutParams labelsLp = new LinearLayout.LayoutParams(0, -2, 1f);
         row.addView(labels, labelsLp);
-        labels.addView(text(title, 18, WHITE, true));
+        labels.addView(text(title, compact ? 17 : 18, WHITE, true));
         TextView sub = text(subtitle, 14, MUTED, false);
         sub.setLineSpacing(dp(2), 1f);
+        sub.setIncludeFontPadding(true);
         LinearLayout.LayoutParams subLp = new LinearLayout.LayoutParams(-1, -2);
         subLp.topMargin = dp(4);
         labels.addView(sub, subLp);
 
-        TextView arrow = text("›", 30, 0xFFD5D8F2, false);
+        TextView arrow = text("›", compact ? 26 : 28, 0xFFD5D8F2, false);
         arrow.setGravity(Gravity.CENTER);
-        row.addView(arrow, new LinearLayout.LayoutParams(dp(28), -1));
+        row.addView(arrow, new LinearLayout.LayoutParams(dp(compact ? 20 : 24), -1));
         row.setClickable(true);
         row.setFocusable(true);
         row.setOnClickListener(click);
@@ -966,6 +963,10 @@ public final class MainActivity extends Activity {
     }
 
     private void addSettingsHeader(LinearLayout page, String title, String subtitle, Runnable backAction) {
+        addSettingsHeader(page, title, subtitle, backAction, false);
+    }
+
+    private void addSettingsHeader(LinearLayout page, String title, String subtitle, Runnable backAction, boolean compact) {
         LinearLayout top = new LinearLayout(this);
         top.setGravity(Gravity.CENTER_VERTICAL);
         TextView back = text("‹", 31, WHITE, false);
@@ -992,15 +993,15 @@ public final class MainActivity extends Activity {
         brandText.addView(launcher);
         page.addView(top, new LinearLayout.LayoutParams(-1, dp(48)));
 
-        TextView heading = text(title, 28, WHITE, true);
+        TextView heading = text(title, compact ? 27 : 28, WHITE, true);
         LinearLayout.LayoutParams headingLp = new LinearLayout.LayoutParams(-1, -2);
-        headingLp.topMargin = dp(23);
+        headingLp.topMargin = dp(compact ? 16 : 23);
         page.addView(heading, headingLp);
         TextView description = text(subtitle, 15, MUTED, false);
         description.setLineSpacing(dp(3), 1f);
         LinearLayout.LayoutParams descriptionLp = new LinearLayout.LayoutParams(-1, -2);
         descriptionLp.topMargin = dp(6);
-        descriptionLp.bottomMargin = dp(19);
+        descriptionLp.bottomMargin = dp(compact ? 14 : 19);
         page.addView(description, descriptionLp);
     }
 
@@ -1366,18 +1367,20 @@ public final class MainActivity extends Activity {
         installerScreenVisible = true;
         LinearLayout page = newPage();
         page.setBackground(homeGradient());
+        boolean compact = isCompactPhoneLayout();
+        applyConnectionPageInsets(page, compact ? 10 : 14);
         addSettingsHeader(page, "Antes de instalar",
                 "Realiza estos pasos en tu Fire TV\npara una instalación correcta.", () -> {
                     uninstallMode = false;
                     showHome();
-                });
+                }, compact);
         page.addView(connectionStepCard("1", 3, "Antes de depuración ADB",
-                "Ve a Ajustes > Mi Fire TV > Opciones para desarrolladores y activa Depuración ADB."));
+                "Ve a Ajustes > Mi Fire TV > Opciones para desarrolladores y activa Depuración ADB.", compact));
         page.addView(connectionStepCard("2", 23, "Conecta a la misma Wi‑Fi",
-                "Tu teléfono y Fire TV deben estar en la misma red."));
+                "Tu teléfono y Fire TV deben estar en la misma red.", compact));
         page.addView(connectionStepCard("3", 24, "Acepta el aviso de depuración",
-                "En tu Fire TV, acepta la solicitud de depuración cuando aparezca."));
-        addConnectionControls(page, false);
+                "En tu Fire TV, acepta la solicitud de depuración cuando aparezca.", compact));
+        addConnectionControls(page, false, compact);
     }
 
     private void buildUninstallPage() {
@@ -1388,31 +1391,52 @@ public final class MainActivity extends Activity {
         keepDataOnUninstall = getPreferences(MODE_PRIVATE).getBoolean("keep_data", true);
         LinearLayout page = newPage();
         page.setBackground(homeGradient());
+        boolean compact = isCompactPhoneLayout();
+        applyConnectionPageInsets(page, compact ? 10 : 14);
         addSettingsHeader(page, "Antes de desinstalar",
                 "Revisa la siguiente información antes\nde continuar.", () -> {
                     uninstallMode = false;
                     showHome();
-                });
+                }, compact);
         page.addView(connectionInfoCard(2, "Se eliminará NIIVO",
-                "El launcher actual se desinstalará de tu Fire TV."));
+                "El launcher actual se desinstalará de tu Fire TV.", compact));
         page.addView(connectionInfoCard(4, "Se restaurará el launcher original",
-                "Tu Fire TV volverá al launcher de Amazon al finalizar."));
+                "Tu Fire TV volverá al launcher de Amazon al finalizar.", compact));
         page.addView(connectionInfoCard(3, "Tus datos se mantendrán",
                 keepDataOnUninstall
                         ? "Esta acción no afecta tus aplicaciones o configuraciones del Fire TV."
-                        : "La configuración local de NIIVO se eliminará al desinstalar."));
+                        : "La configuración local de NIIVO se eliminará al desinstalar.", compact));
         page.addView(connectionInfoCard(7, "Se requiere conexión ADB",
-                "Tu teléfono y Fire TV deben estar en la misma red y tener ADB habilitado."));
-        addConnectionControls(page, true);
+                "Tu teléfono y Fire TV deben estar en la misma red y tener ADB habilitado.", compact));
+        addConnectionControls(page, true, compact);
     }
 
-    private View connectionStepCard(String number, int icon, String title, String subtitle) {
+    private boolean isCompactPhoneLayout() {
+        return getResources().getConfiguration().screenWidthDp < 380
+                || getResources().getConfiguration().fontScale >= 1.15f;
+    }
+
+    private void applyConnectionPageInsets(LinearLayout page, int bottomPaddingDp) {
+        page.setPadding(dp(22), 0, dp(22), dp(bottomPaddingDp));
+        View scroller = (View) page.getParent();
+        if (scroller instanceof ScrollView) {
+            ((ScrollView) scroller).setClipToPadding(true);
+            scroller.setOnApplyWindowInsetsListener((view, insets) -> {
+                view.setPadding(0, insets.getSystemWindowInsetTop(), 0, insets.getSystemWindowInsetBottom());
+                return insets;
+            });
+            scroller.requestApplyInsets();
+        }
+    }
+
+    private View connectionStepCard(String number, int icon, String title, String subtitle, boolean compact) {
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(11), dp(9), dp(12), dp(9));
+        row.setPadding(dp(11), dp(compact ? 7 : 9), dp(12), dp(compact ? 7 : 9));
         row.setBackground(glassPanel(dp(17)));
-        LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(-1, dp(82));
-        rowLp.bottomMargin = dp(9);
+        row.setMinimumHeight(dp(compact ? 70 : 76));
+        LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(-1, -2);
+        rowLp.bottomMargin = dp(compact ? 6 : 7);
         row.setLayoutParams(rowLp);
 
         TextView badge = text(number, 14, WHITE, true);
@@ -1420,15 +1444,16 @@ public final class MainActivity extends Activity {
         badge.setBackground(round(0xFF075079, dp(22), 0x6646BFFF, dp(1)));
         row.addView(badge, new LinearLayout.LayoutParams(dp(29), dp(29)));
         ActionIconView stepIcon = new ActionIconView(this, icon);
-        LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(dp(38), dp(38));
-        iconLp.leftMargin = dp(9);
-        iconLp.rightMargin = dp(10);
+        int iconSize = compact ? 34 : 38;
+        LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(dp(iconSize), dp(iconSize));
+        iconLp.leftMargin = dp(compact ? 7 : 9);
+        iconLp.rightMargin = dp(compact ? 8 : 10);
         row.addView(stepIcon, iconLp);
         LinearLayout labels = new LinearLayout(this);
         labels.setOrientation(LinearLayout.VERTICAL);
         row.addView(labels, new LinearLayout.LayoutParams(0, -2, 1f));
-        labels.addView(text(title, 14, WHITE, true));
-        TextView detail = text(subtitle, 11, MUTED, false);
+        labels.addView(text(title, compact ? 14 : 14, WHITE, true));
+        TextView detail = text(subtitle, compact ? 11 : 11, MUTED, false);
         detail.setLineSpacing(dp(1), 1f);
         LinearLayout.LayoutParams detailLp = new LinearLayout.LayoutParams(-1, -2);
         detailLp.topMargin = dp(3);
@@ -1436,20 +1461,22 @@ public final class MainActivity extends Activity {
         return row;
     }
 
-    private View connectionInfoCard(int icon, String title, String subtitle) {
+    private View connectionInfoCard(int icon, String title, String subtitle, boolean compact) {
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(10), dp(7), dp(10), dp(7));
+        row.setPadding(dp(10), dp(compact ? 6 : 7), dp(10), dp(compact ? 6 : 7));
         row.setBackground(glassPanel(dp(16)));
-        LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(-1, dp(68));
-        rowLp.bottomMargin = dp(8);
+        row.setMinimumHeight(dp(compact ? 62 : 66));
+        LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(-1, -2);
+        rowLp.bottomMargin = dp(compact ? 6 : 7);
         row.setLayoutParams(rowLp);
         ActionIconView iconView = new ActionIconView(this, icon);
-        row.addView(iconView, new LinearLayout.LayoutParams(dp(40), dp(40)));
+        int iconSize = compact ? 36 : 40;
+        row.addView(iconView, new LinearLayout.LayoutParams(dp(iconSize), dp(iconSize)));
         View divider = new View(this);
         divider.setBackgroundColor(0x663879B7);
-        LinearLayout.LayoutParams dividerLp = new LinearLayout.LayoutParams(dp(1), dp(44));
-        dividerLp.setMargins(dp(10), 0, dp(12), 0);
+        LinearLayout.LayoutParams dividerLp = new LinearLayout.LayoutParams(dp(1), dp(compact ? 40 : 44));
+        dividerLp.setMargins(dp(compact ? 8 : 10), 0, dp(compact ? 9 : 12), 0);
         row.addView(divider, dividerLp);
         LinearLayout labels = new LinearLayout(this);
         labels.setOrientation(LinearLayout.VERTICAL);
@@ -1463,13 +1490,26 @@ public final class MainActivity extends Activity {
         return row;
     }
 
-    private void addConnectionControls(LinearLayout page, boolean removing) {
+    private void addConnectionControls(LinearLayout page, boolean removing, boolean compact) {
         searchButton = button("Buscar Fire TV en mi Wi‑Fi", true);
-        LinearLayout.LayoutParams searchLp = new LinearLayout.LayoutParams(-1, dp(52));
-        searchLp.topMargin = dp(7);
-        searchLp.bottomMargin = dp(7);
+        LinearLayout.LayoutParams searchLp = new LinearLayout.LayoutParams(-1, dp(compact ? 50 : 52));
+        searchLp.topMargin = dp(compact ? 4 : 7);
+        searchLp.bottomMargin = dp(4);
         page.addView(searchButton, searchLp);
         searchButton.setOnClickListener(v -> scanNetwork());
+
+        status = text("", 12, MUTED, false);
+        status.setGravity(Gravity.CENTER);
+        status.setVisibility(View.GONE);
+        LinearLayout.LayoutParams statusLp = new LinearLayout.LayoutParams(-1, -2);
+        statusLp.topMargin = dp(2);
+        page.addView(status, statusLp);
+        devices = text("", 12, MUTED, false);
+        devices.setVisibility(View.GONE);
+        LinearLayout.LayoutParams devicesLp = new LinearLayout.LayoutParams(-1, -2);
+        devicesLp.topMargin = dp(2);
+        devicesLp.bottomMargin = dp(3);
+        page.addView(devices, devicesLp);
 
         LinearLayout note = new LinearLayout(this);
         note.setGravity(Gravity.TOP | Gravity.START);
@@ -1481,7 +1521,9 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams hintLp = new LinearLayout.LayoutParams(0, -2, 1f);
         hintLp.leftMargin = dp(10);
         note.addView(hint, hintLp);
-        page.addView(note);
+        LinearLayout.LayoutParams noteLp = new LinearLayout.LayoutParams(-1, -2);
+        noteLp.bottomMargin = dp(compact ? 2 : 4);
+        page.addView(note, noteLp);
 
         LinearLayout ipBox = new LinearLayout(this);
         ipBox.setGravity(Gravity.CENTER_VERTICAL);
@@ -1504,15 +1546,15 @@ public final class MainActivity extends Activity {
         ipInput.setPadding(0, 0, 0, 0);
         ipInput.setBackgroundColor(Color.TRANSPARENT);
         ipBox.addView(ipInput, new LinearLayout.LayoutParams(0, -1, 1f));
-        LinearLayout.LayoutParams ipLp = new LinearLayout.LayoutParams(-1, dp(50));
-        ipLp.topMargin = dp(4);
+        LinearLayout.LayoutParams ipLp = new LinearLayout.LayoutParams(-1, dp(compact ? 48 : 50));
+        ipLp.topMargin = dp(2);
         page.addView(ipBox, ipLp);
 
         installButton = button(removing ? "Desinstalar NIIVO" : "Continuar", true);
         installButton.setEnabled(false);
         installButton.setAlpha(0.5f);
         LinearLayout.LayoutParams actionLp = new LinearLayout.LayoutParams(-1, dp(54));
-        actionLp.topMargin = dp(12);
+        actionLp.topMargin = dp(compact ? 8 : 10);
         page.addView(installButton, actionLp);
         ipInput.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -1524,17 +1566,6 @@ public final class MainActivity extends Activity {
         });
         installButton.setOnClickListener(v -> installSelected());
 
-        devices = text("", 12, MUTED, false);
-        devices.setVisibility(View.GONE);
-        LinearLayout.LayoutParams devicesLp = new LinearLayout.LayoutParams(-1, -2);
-        devicesLp.topMargin = dp(7);
-        page.addView(devices, devicesLp);
-        status = text("", 12, MUTED, false);
-        status.setGravity(Gravity.CENTER);
-        status.setVisibility(View.GONE);
-        LinearLayout.LayoutParams statusLp = new LinearLayout.LayoutParams(-1, -2);
-        statusLp.topMargin = dp(6);
-        page.addView(status, statusLp);
     }
 
     private void showProgressScreen(boolean removing) {
@@ -1892,6 +1923,7 @@ public final class MainActivity extends Activity {
         status.setVisibility(View.VISIBLE);
         status.setText("Buscando dispositivos ADB en esta red…");
         devices.setText("Buscando Fire TV en la red Wi‑Fi…");
+        revealConnectionFeedback();
         found.clear();
         WORK.execute(() -> {
             List<String> candidates = new ArrayList<>();
@@ -1940,7 +1972,24 @@ public final class MainActivity extends Activity {
                         installButton.setEnabled(false);
                     }
                 }
+                revealConnectionFeedback();
             });
+        });
+    }
+
+    private void revealConnectionFeedback() {
+        if (devices == null || !devices.isShown()) return;
+        View parent = (View) devices.getParent();
+        if (!(parent instanceof LinearLayout)) return;
+        View scrollerView = (View) parent.getParent();
+        if (!(scrollerView instanceof ScrollView)) return;
+        ScrollView scroller = (ScrollView) scrollerView;
+        devices.post(() -> {
+            int viewportBottom = scroller.getScrollY() + scroller.getHeight() - scroller.getPaddingBottom();
+            int feedbackBottom = devices.getBottom() + dp(12);
+            if (feedbackBottom > viewportBottom) {
+                scroller.smoothScrollTo(0, feedbackBottom - scroller.getHeight() + scroller.getPaddingBottom());
+            }
         });
     }
 

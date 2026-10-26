@@ -2,6 +2,30 @@
 
 Cambios relevantes por versión de NIIVO. Las notas describen cambios presentes en el código y artefactos disponibles; no implican que cada combinación de dispositivo se haya probado físicamente.
 
+## 2.1.0-beta.1 — versión de pruebas, 26 de octubre de 2026
+
+Esta pre-release está destinada a pruebas. La validación en Fire TV y teléfono físicos queda pendiente.
+
+### NIIVO Launcher
+
+- Añade un menú contextual compacto para las aplicaciones favoritas, con acciones para reemplazar, quitar de favoritos y abrir la información de la aplicación.
+- Conserva los espacios del dock al quitar una favorita para que otra aplicación pueda ocupar esa misma posición.
+- Se fija `versionName 2.1.0-beta.1` y `versionCode 11`; se conserva `applicationId com.ivantrj.glasslauncher`.
+
+### NIIVO Installer
+
+- Adapta el menú principal y las pantallas de conexión a pantallas estrechas y tamaños de letra ampliados, con contenido desplazable para evitar recortes.
+- Simplifica las descripciones de las cuatro acciones principales y mantiene sus funciones.
+- Muestra el estado y los resultados de la búsqueda de Fire TV dentro del flujo de conexión.
+- Incluye el APK NIIVO Launcher 2.1.0-beta.1 para instalarlo desde el teléfono.
+- Se fija `versionName 2.1.0-beta.1` y `versionCode 18`; se conserva `applicationId com.nivo.installer`.
+
+### Validación de esta beta
+
+- `clean assembleRelease` finalizó correctamente en ambos proyectos.
+- Se verificaron los identificadores, las versiones, la firma de ambos APK y que el Launcher integrado en el Installer coincide con el APK generado.
+- Las firmas coinciden con las versiones 2.0 correspondientes. La instalación y el funcionamiento en Fire TV y teléfono físicos siguen pendientes de prueba.
+
 ## 2.0 — estable, 26 de octubre de 2026
 
 ### NIIVO Launcher
