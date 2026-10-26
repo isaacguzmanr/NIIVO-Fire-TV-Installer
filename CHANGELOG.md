@@ -2,6 +2,20 @@
 
 Cambios relevantes por versión de NIIVO. Las notas describen cambios presentes en el código y artefactos disponibles; no implican que cada combinación de dispositivo se haya probado físicamente.
 
+## 2.1.0-beta.2 — solo NIIVO Launcher, 26 de octubre de 2026
+
+Esta pre-release actualiza únicamente el launcher para pruebas. No incluye una nueva versión del Installer.
+
+### NIIVO Launcher
+
+- Ajusta dinámicamente el tamaño del menú contextual según el espacio visible y la densidad de pantalla, manteniendo sus acciones y navegación.
+- Se fija `versionName 2.1.0-beta.2` y `versionCode 12`; se conserva `applicationId com.ivantrj.glasslauncher`.
+
+### Validación
+
+- `clean assembleRelease` finalizó correctamente; se verificaron `applicationId`, `versionCode 12`, `versionName 2.1.0-beta.2` y la firma compatible con beta.1.
+- La comprobación e instalación desde un Fire TV físico quedan pendientes.
+
 ## 2.1.0-beta.1 — versión de pruebas, 26 de octubre de 2026
 
 Esta pre-release está destinada a pruebas. La validación en Fire TV y teléfono físicos queda pendiente.
