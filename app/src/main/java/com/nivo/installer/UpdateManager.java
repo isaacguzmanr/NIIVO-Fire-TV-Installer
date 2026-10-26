@@ -17,8 +17,8 @@ import java.util.regex.Pattern;
 final class UpdateManager {
     private static final int CONNECT_TIMEOUT_MS = 15000;
     private static final int READ_TIMEOUT_MS = 30000;
-    private static final Pattern VERSION = Pattern.compile("^v?(\\d+)\\.(\\d+)\\.(\\d+)(?:-([0-9A-Za-z.-]+))?(?:\\+[0-9A-Za-z.-]+)?$");
-    private static final Pattern APK_NAME = Pattern.compile("(?i)^NIIVO[-_]v?(\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?)\\.apk$");
+    private static final Pattern VERSION = Pattern.compile("^v?(\\d+)\\.(\\d+)(?:\\.(\\d+))?(?:-([0-9A-Za-z.-]+))?(?:\\+[0-9A-Za-z.-]+)?$");
+    private static final Pattern APK_NAME = Pattern.compile("(?i)^NIIVO(?:-Launcher)?[-_]v?(\\d+\\.\\d+(?:\\.\\d+)?(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?)\\.apk$");
 
     interface DownloadListener { void onProgress(long downloaded, long total); }
 
@@ -38,8 +38,9 @@ final class UpdateManager {
         }
     }
 
-    static ReleaseCheck checkLatest() throws Exception {
+    static ReleaseCheck checkLatest(String installedVersion) throws Exception {
         String endpoint="https://api.github.com/repos/"+UpdateConfig.GITHUB_OWNER+"/"+UpdateConfig.GITHUB_REPOSITORY+"/releases?per_page=20";
+        boolean allowPrerelease = installedVersion != null && installedVersion.toLowerCase(Locale.ROOT).contains("-beta");
         HttpURLConnection c=open(endpoint,"application/vnd.github+json");
         try {
             int code=c.getResponseCode();
@@ -52,6 +53,8 @@ final class UpdateManager {
                 String tag=json.optString("tag_name","").trim();
                 String version=normalizeVersion(tag);
                 if(version==null) continue;
+                boolean prerelease=json.optBoolean("prerelease",false) || version.contains("-");
+                if(prerelease && !allowPrerelease) continue;
                 String page=json.optString("html_url","");
                 JSONArray assets=json.optJSONArray("assets");
                 if(assets==null) continue;
@@ -97,12 +100,12 @@ final class UpdateManager {
     static String normalizeVersion(String raw) {
         if(raw==null) return null;
         Matcher m=VERSION.matcher(raw.trim()); if(!m.matches()) return null;
-        return m.group(1)+"."+m.group(2)+"."+m.group(3)+(m.group(4)==null?"":"-"+m.group(4));
+        return m.group(1)+"."+m.group(2)+(m.group(3)==null?"":"."+m.group(3))+(m.group(4)==null?"":"-"+m.group(4));
     }
     static int compareVersions(String left,String right) {
         Matcher a=VERSION.matcher(left==null?"":left.trim()), b=VERSION.matcher(right==null?"":right.trim());
         if(!a.matches()||!b.matches()) throw new IllegalArgumentException("Versión semántica inválida.");
-        for(int i=1;i<=3;i++){ int cmp=Long.compare(number(a.group(i)),number(b.group(i))); if(cmp!=0)return cmp; }
+        for(int i=1;i<=3;i++){ int cmp=Long.compare(versionPart(a,i),versionPart(b,i)); if(cmp!=0)return cmp; }
         String pa=a.group(4),pb=b.group(4); if(pa==null&&pb==null)return 0; if(pa==null)return 1; if(pb==null)return -1;
         String[] aa=pa.split("\\."),bb=pb.split("\\.");
         for(int i=0;i<Math.min(aa.length,bb.length);i++){
@@ -112,6 +115,7 @@ final class UpdateManager {
         }
         return Integer.compare(aa.length,bb.length);
     }
+    private static long versionPart(Matcher matcher,int group){return group==3&&matcher.group(group)==null?0:number(matcher.group(group));}
     private static long number(String value){try{return Long.parseLong(value);}catch(NumberFormatException e){return Long.MAX_VALUE;}}
     private static String findChecksum(JSONArray assets,String apkName,String tag) throws Exception {
         String[] candidates={apkName+".sha256", "NIIVO-"+normalizeVersion(tag)+"-SHA256SUMS.txt", "SHA256SUMS.txt"};

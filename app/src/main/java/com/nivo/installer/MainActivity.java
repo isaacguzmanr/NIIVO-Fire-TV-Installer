@@ -26,6 +26,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -59,6 +60,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.ZipFile;
 
 public final class MainActivity extends Activity {
     private static final int BG = Color.rgb(7, 26, 43);
@@ -80,12 +82,15 @@ public final class MainActivity extends Activity {
     private boolean uninstallMode;
     private boolean settingsScreenVisible;
     private boolean settingsDetailVisible;
+    private boolean installerScreenVisible;
     private boolean updatesScreenVisible;
     private volatile boolean updateOperationRunning;
     private volatile long lastUpdateProgressUi;
     private UpdateManager.Release pendingUpdate;
     private String updateHost = "";
     private String installedTvVersion = "";
+    private String latestReleaseUrl = "";
+    private String lastUpdateCheckLabel = "";
     private android.widget.ProgressBar updateProgressBar;
     private TextView updateProgressLabel;
     private TextView updateProgressSize;
@@ -100,6 +105,15 @@ public final class MainActivity extends Activity {
 
     private android.widget.FrameLayout progressTrack;
     private IndeterminateProgressView indeterminateProgress;
+    private android.widget.ProgressBar operationProgressBar;
+    private TextView operationProgressPercent;
+    private TextView operationProgressTitle;
+    private TextView operationProgressSubtitle;
+    private final View[] operationStepStatuses = new View[4];
+    private android.widget.ProgressBar operationActiveSpinner;
+    private final TextView[] operationStepTitles = new TextView[4];
+    private final TextView[] operationStepSubtitles = new TextView[4];
+    private final View[] operationStepIcons = new View[4];
     private volatile boolean cancelRequested;
     private volatile boolean operationRunning;
     private volatile Socket activeSocket;
@@ -117,66 +131,38 @@ public final class MainActivity extends Activity {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setGravity(Gravity.CENTER);
-        root.setPadding(dp(34), dp(28), dp(34), dp(28));
-        root.setBackground(screenGradient());
+        root.setPadding(dp(34), dp(34), dp(34), dp(34));
+        root.setBackground(homeGradient());
         View logo = new NivoMarkView(this);
-root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
-        ValueAnimator logoPulse = ValueAnimator.ofFloat(0.96f, 1.035f);
-        logoPulse.setDuration(760);
-        logoPulse.setRepeatMode(ValueAnimator.REVERSE);
-        logoPulse.setRepeatCount(ValueAnimator.INFINITE);
-        logoPulse.addUpdateListener(animation -> {
-            float scale = (float) animation.getAnimatedValue();
-            logo.setScaleX(scale);
-            logo.setScaleY(scale);
-        });
-        logoPulse.start();
+        root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
         TextView name = text("NIIVO", 28, WHITE, true);
-        name.setLetterSpacing(0.12f);
+        name.setLetterSpacing(0.08f);
         name.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams nameLp = new LinearLayout.LayoutParams(-1, -2);
         nameLp.topMargin = dp(17);
         root.addView(name, nameLp);
-        TextView tag = text("T V   S I M P L I F I E D", 11, MUTED, false);
+        TextView launcher = text("L A U N C H E R", 10, MUTED, false);
+        launcher.setLetterSpacing(0.09f);
+        launcher.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams launcherLp = new LinearLayout.LayoutParams(-1, -2);
+        launcherLp.topMargin = dp(3);
+        root.addView(launcher, launcherLp);
+        TextView tag = text("Tu Fire TV, a tu manera.", 16, MUTED, false);
         tag.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams tagLp = new LinearLayout.LayoutParams(-1, -2);
-        tagLp.topMargin = dp(8);
+        tagLp.topMargin = dp(25);
         root.addView(tag, tagLp);
-        android.widget.FrameLayout track = new android.widget.FrameLayout(this);
-        track.setBackground(round(0x553B4B79, dp(4), 0x003B4B79, 0));
-        android.view.View fill = new android.view.View(this);
-        fill.setBackground(gradientButton(dp(4)));
-        android.widget.FrameLayout.LayoutParams fillLp = new android.widget.FrameLayout.LayoutParams(0, -1);
-        track.addView(fill, fillLp);
-        LinearLayout.LayoutParams trackLp = new LinearLayout.LayoutParams(dp(190), dp(5));
-        trackLp.topMargin = dp(68);
-        root.addView(track, trackLp);
-        TextView loading = text("Iniciando…", 13, MUTED, false);
+        UpdateRingView ring = new UpdateRingView(this);
+        LinearLayout.LayoutParams ringLp = new LinearLayout.LayoutParams(dp(58), dp(58));
+        ringLp.topMargin = dp(68);
+        root.addView(ring, ringLp);
+        TextView loading = text("Iniciando NIIVO…", 15, MUTED, false);
         loading.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams loadingLp = new LinearLayout.LayoutParams(-1, -2);
-        loadingLp.topMargin = dp(12);
+        loadingLp.topMargin = dp(15);
         root.addView(loading, loadingLp);
         setContentView(root);
-        track.post(() -> {
-            int fullWidth = track.getWidth();
-            if (fullWidth <= 0 || isFinishing()) return;
-            ValueAnimator progress = ValueAnimator.ofInt(0, fullWidth);
-            progress.setDuration(1750);
-            progress.setInterpolator(new android.view.animation.DecelerateInterpolator(1.15f));
-            progress.addUpdateListener(animation -> {
-                android.widget.FrameLayout.LayoutParams params =
-                        (android.widget.FrameLayout.LayoutParams) fill.getLayoutParams();
-                params.width = (int) animation.getAnimatedValue();
-                fill.setLayoutParams(params);
-            });
-            progress.addListener(new android.animation.AnimatorListenerAdapter() {
-                @Override public void onAnimationEnd(android.animation.Animator animation) {
-                    logoPulse.cancel();
-                    showHome();
-                }
-            });
-            progress.start();
-        });
+        root.postDelayed(() -> { if (!isFinishing()) showHome(); }, 2300);
     }
 
     private LinearLayout newPage() {
@@ -202,105 +188,139 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
         updatesScreenVisible = false;
         settingsScreenVisible = false;
         settingsDetailVisible = false;
+        installerScreenVisible = false;
         LinearLayout page = newPage();
-        page.setPadding(dp(16), dp(25), dp(16), dp(24));
+        page.setBackground(homeGradient());
+        page.setPadding(dp(18), dp(78), dp(16), dp(24));
         LinearLayout brand = new LinearLayout(this);
         brand.setGravity(Gravity.CENTER_VERTICAL);
-        brand.setPadding(dp(8), 0, dp(8), 0);
+        brand.setPadding(dp(12), 0, 0, 0);
         View mark = new NivoMarkView(this);
-        brand.addView(mark, new LinearLayout.LayoutParams(dp(38), dp(38)));
+        brand.addView(mark, new LinearLayout.LayoutParams(dp(52), dp(52)));
+        LinearLayout brandWords = new LinearLayout(this);
+        brandWords.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams brandWordsLp = new LinearLayout.LayoutParams(-2, -2);
+        brandWordsLp.leftMargin = dp(17);
+        brand.addView(brandWords, brandWordsLp);
+        TextView name = text("NIIVO", 32, WHITE, true);
+        name.setLetterSpacing(0.15f);
+        brandWords.addView(name);
+        TextView launcher = text("L A U N C H E R", 11, MUTED, false);
+        launcher.setLetterSpacing(0.12f);
+        brandWords.addView(launcher);
         View spacer = new View(this);
         brand.addView(spacer, new LinearLayout.LayoutParams(0, 1, 1f));
-        TextView more = text("⋮", 24, WHITE, false);
-        more.setGravity(Gravity.CENTER);
-        more.setContentDescription("Más opciones");
-        brand.addView(more, new LinearLayout.LayoutParams(dp(32), dp(38)));
-        more.setOnClickListener(v -> {
-            android.widget.PopupMenu popup = new android.widget.PopupMenu(this, more);
-            popup.getMenu().add("Configuración").setOnMenuItemClickListener(item -> { showSettings(); return true; });
-            popup.getMenu().add("Acerca de NIIVO").setOnMenuItemClickListener(item -> {
-                Toast.makeText(this, "NIIVO Installer 1.5.0-beta.1", Toast.LENGTH_SHORT).show();
-                return true;
-            });
-            popup.show();
-        });
+        TextView version = text(getEmbeddedLauncherVersion().replace("Versión ", "v"), 12, MUTED, false);
+        version.setGravity(Gravity.CENTER);
+        version.setSingleLine(true);
+        version.setPadding(dp(10), 0, dp(10), 0);
+        version.setBackground(round(0xD0071429, dp(22), 0x80344BC6, dp(1)));
+        LinearLayout.LayoutParams versionLp = new LinearLayout.LayoutParams(-2, dp(34));
+        brand.addView(version, versionLp);
+        FrameLayout settings = new FrameLayout(this);
+        settings.setForegroundGravity(Gravity.CENTER);
+        settings.setContentDescription("Configuración");
+        settings.setBackgroundColor(Color.TRANSPARENT);
+        settings.setFocusable(true);
+        settings.setClickable(true);
+        settings.setOnClickListener(v -> showSettings());
+        ActionIconView settingsGlyph = new ActionIconView(this, 3);
+        View settingsDisc = new View(this);
+        settingsDisc.setBackground(round(0x55200D45, dp(20), 0x222D7CE6, dp(1)));
+        settings.addView(settingsDisc, new FrameLayout.LayoutParams(dp(34), dp(34), Gravity.CENTER));
+        FrameLayout.LayoutParams settingsGlyphLp = new FrameLayout.LayoutParams(dp(26), dp(26), Gravity.CENTER);
+        settings.addView(settingsGlyph, settingsGlyphLp);
+        LinearLayout.LayoutParams settingsLp = new LinearLayout.LayoutParams(dp(40), dp(40));
+        settingsLp.leftMargin = dp(4);
+        brand.addView(settings, settingsLp);
         page.addView(brand);
 
-        TextView title = text("NIIVO", 31, WHITE, true);
-        LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(-1, -2);
-        title.setTextSize(31);
-        title.setPadding(dp(8), 0, 0, 0);
-        titleLp.topMargin = dp(34);
-        page.addView(title, titleLp);
-        TextView intro = text("Tu Fire TV, a tu manera.", 16, MUTED, false);
-        intro.setTypeface(Typeface.DEFAULT, Typeface.ITALIC);
-        intro.setPadding(dp(8), 0, 0, 0);
-        LinearLayout.LayoutParams introLp = new LinearLayout.LayoutParams(-1, -2);
-        introLp.topMargin = dp(7);
-        introLp.bottomMargin = dp(27);
-        page.addView(intro, introLp);
-        page.addView(actionCard(0, "Instalar", getEmbeddedLauncherVersion(), true,
+        TextView tagline = text("Tu Fire TV, a tu manera.", 16, MUTED, false);
+        LinearLayout.LayoutParams taglineLp = new LinearLayout.LayoutParams(-1, -2);
+        taglineLp.topMargin = dp(5);
+        taglineLp.bottomMargin = dp(33);
+        tagline.setPadding(dp(10), 0, 0, 0);
+        tagline.setTextSize(15);
+        tagline.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.ITALIC));
+        page.addView(tagline, taglineLp);
+        page.addView(mainMenuCard(9, "Instalar", "Instala la última versión de NIIVO\nen tu dispositivo.", true,
                 v -> { uninstallMode = false; buildInstallerPage(); }));
-        page.addView(actionCard(1, "Actualizar", "Verificar nueva versión", false,
+        page.addView(mainMenuCard(1, "Actualizar", "Comprueba si tienes una nueva\nversión disponible.", false,
                 v -> showUpdates()));
-        page.addView(actionCard(2, "Desinstalar", "Remover NIIVO", false,
-                v -> { uninstallMode = true; buildInstallerPage(); }));
-        page.addView(actionCard(3, "Configuración", "Ajustes y preferencias", false,
+        page.addView(mainMenuCard(3, "Configuración", "Personaliza NIIVO a tu gusto.", false,
                 v -> showSettings()));
+        page.addView(mainMenuCard(2, "Desinstalar", "Elimina NIIVO de tu dispositivo.", false,
+                v -> { uninstallMode = true; buildInstallerPage(); }));
     }
 
-    private View actionCard(int icon, String title, String subtitle, boolean featured,
-                            View.OnClickListener click) {
+    private View mainMenuCard(int icon, String title, String subtitle, boolean featured,
+                              View.OnClickListener click) {
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(12), dp(9), dp(13), dp(9));
-        row.setBackground(featured ? installerCardPanel(dp(19)) : glassPanel(dp(19)));
-        LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(-1, dp(92));
-        rowLp.bottomMargin = dp(8);
+        row.setPadding(dp(16), dp(8), dp(11), dp(8));
+        row.setBackground(featured ? installerCardPanel(dp(16)) : glassPanel(dp(15)));
+        int cardHeight = featured ? 102 : title.equals("Actualizar") ? 94 : 90;
+        LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(-1, dp(cardHeight));
+        rowLp.bottomMargin = featured ? dp(18) : title.equals("Desinstalar") ? 0 : dp(10);
         row.setLayoutParams(rowLp);
 
+        int iconSize = icon == 9 ? 56 : icon == 1 ? 56 : icon == 2 ? 60 : 46;
         ActionIconView iconView = new ActionIconView(this, icon);
-        iconView.setBackground(round(0x4421385D, dp(30), 0x333D7EBE, dp(1)));
-        row.addView(iconView, new LinearLayout.LayoutParams(dp(60), dp(60)));
+        iconView.setContentDescription(title);
+        LinearLayout iconBox = new LinearLayout(this);
+        iconBox.setGravity(Gravity.CENTER);
+        iconBox.addView(iconView, new LinearLayout.LayoutParams(dp(iconSize), dp(iconSize)));
+        row.addView(iconBox, new LinearLayout.LayoutParams(dp(70), dp(66)));
+        View divider = new View(this);
+        divider.setBackgroundColor(featured ? 0xB5228BFF : 0x55337BB8);
+        LinearLayout.LayoutParams dividerLp = new LinearLayout.LayoutParams(dp(1), dp(featured ? 62 : 54));
+        dividerLp.leftMargin = dp(8);
+        dividerLp.rightMargin = dp(18);
+        row.addView(divider, dividerLp);
 
         LinearLayout labels = new LinearLayout(this);
         labels.setOrientation(LinearLayout.VERTICAL);
         LinearLayout.LayoutParams labelsLp = new LinearLayout.LayoutParams(0, -2, 1f);
-        labelsLp.leftMargin = dp(12);
         row.addView(labels, labelsLp);
-        labels.addView(text(title, 16, WHITE, true));
-        TextView sub = text(subtitle, 13, MUTED, false);
+        labels.addView(text(title, 18, WHITE, true));
+        TextView sub = text(subtitle, 14, MUTED, false);
+        sub.setLineSpacing(dp(2), 1f);
         LinearLayout.LayoutParams subLp = new LinearLayout.LayoutParams(-1, -2);
-        subLp.topMargin = dp(3);
+        subLp.topMargin = dp(4);
         labels.addView(sub, subLp);
 
-        TextView arrow = text("›", 27, MUTED, false);
+        TextView arrow = text("›", 30, 0xFFD5D8F2, false);
         arrow.setGravity(Gravity.CENTER);
-        row.addView(arrow, new LinearLayout.LayoutParams(dp(24), -1));
+        row.addView(arrow, new LinearLayout.LayoutParams(dp(28), -1));
         row.setClickable(true);
         row.setFocusable(true);
         row.setOnClickListener(click);
+        row.setOnFocusChangeListener((view, focused) -> {
+            if (!featured) row.setBackground(focused ? installerCardPanel(dp(18)) : glassPanel(dp(18)));
+            float scale = focused ? 1.015f : 1f;
+            row.animate().scaleX(scale).scaleY(scale).setDuration(110).start();
+        });
         return row;
     }
     private LinearLayout updatesPage(String subtitle) {
         LinearLayout page = newPage();
-        page.setPadding(dp(18), dp(10), dp(18), dp(24));
-        TextView back = text("‹", 32, WHITE, false);
+        page.setPadding(dp(18), dp(10), dp(18), dp(26));
+        TextView back = text("‹", 30, WHITE, false);
         back.setGravity(Gravity.CENTER);
         back.setContentDescription("Regresar");
-
+        back.setOnClickListener(v -> { updatesScreenVisible = false; showHome(); });
         page.addView(back, new LinearLayout.LayoutParams(dp(48), dp(48)));
         TextView title = text("Actualizaciones", 30, WHITE, true);
         title.setPadding(dp(8), 0, 0, 0);
         LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(-1, -2);
-        titleLp.topMargin = dp(12);
+        titleLp.topMargin = dp(8);
         page.addView(title, titleLp);
         TextView intro = text(subtitle, 16, MUTED, false);
         intro.setLineSpacing(dp(3), 1f);
         intro.setPadding(dp(8), 0, 0, 0);
         LinearLayout.LayoutParams introLp = new LinearLayout.LayoutParams(-1, -2);
         introLp.topMargin = dp(7);
-        introLp.bottomMargin = dp(22);
+        introLp.bottomMargin = dp(18);
         page.addView(intro, introLp);
         return page;
     }
@@ -321,14 +341,10 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
 
     private void showUpdateNeedDevice() {
         LinearLayout page = updatesPage("Comprueba si tienes la última versión de NIIVO.");
-        page.addView(settingsCard(1, "Versión instalada", "Conecta un Fire TV para comprobar", true, v -> showUpdateHostDialog()));
-        TextView note = text("La versión se consulta directamente en el Fire TV para mostrar el estado real.", 14, MUTED, false);
-        note.setPadding(dp(8), dp(14), dp(8), dp(10));
-        page.addView(note);
+        page.addView(updateVersionCard("No conectada", "Conecta Fire TV para leer su versión", "—", "—", "—", "ADB", 0xFF174A84), updateCardLayout(dp(188), 16));
+        page.addView(updateStatusCard("Fire TV no conectado", "Conecta tu televisor para comprobar su versión instalada y buscar actualizaciones reales.", CYAN, "↔"), updateCardLayout(dp(104), 18));
         Button connect = button("Conectar Fire TV", true);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(58));
-        lp.topMargin = dp(12);
-        page.addView(connect, lp);
+        page.addView(connect, updateCardLayout(dp(58), 0));
         connect.setOnClickListener(v -> showUpdateHostDialog());
         connect.requestFocus();
     }
@@ -366,18 +382,22 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
         updateHost = host;
         pendingUpdate = null;
         LinearLayout page = updatesPage("Comprueba si tienes la última versión de NIIVO.");
-        page.addView(settingsCard(1, "Versión instalada", "Consultando Fire TV…", true, v -> {}));
-        android.widget.ProgressBar spinner = new android.widget.ProgressBar(this);
-        spinner.setIndeterminate(true);
-        LinearLayout.LayoutParams spinLp = new LinearLayout.LayoutParams(dp(32), dp(32));
+        page.addView(updateVersionCard("Comprobando…", "Leyendo la versión del Fire TV", "—", "GitHub", "—", "BUSCANDO", 0xFF174A84), updateCardLayout(dp(188), 30));
+        UpdateRingView spinner = new UpdateRingView(this);
+        LinearLayout.LayoutParams spinLp = new LinearLayout.LayoutParams(dp(58), dp(58));
         spinLp.gravity = Gravity.CENTER_HORIZONTAL;
-        spinLp.topMargin = dp(28);
+        spinLp.topMargin = dp(10);
         page.addView(spinner, spinLp);
-        TextView message = text("Buscando actualizaciones…", 16, MUTED, false);
+        TextView message = text("Comprobando actualizaciones…", 17, WHITE, true);
         message.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams msgLp = new LinearLayout.LayoutParams(-1, -2);
-        msgLp.topMargin = dp(14);
+        msgLp.topMargin = dp(18);
         page.addView(message, msgLp);
+        TextView note = text("Esto puede tardar unos segundos.", 14, MUTED, false);
+        note.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams noteLp = new LinearLayout.LayoutParams(-1, -2);
+        noteLp.topMargin = dp(7);
+        page.addView(note, noteLp);
         page.getChildAt(0).requestFocus();
 
         cancelRequested = false;
@@ -399,7 +419,7 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
                 if (connection != null) try { connection.close(); } catch (Exception ignored) {}
             }
             try {
-                UpdateManager.ReleaseCheck check = UpdateManager.checkLatest();
+                UpdateManager.ReleaseCheck check = UpdateManager.checkLatest(installedTvVersion);
                 runOnUiThread(() -> presentUpdateCheck(check, host));
             } catch (Exception ex) {
                 String detail = updateFailureMessage(ex);
@@ -426,6 +446,8 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
     private void presentUpdateCheck(UpdateManager.ReleaseCheck check, String host) {
         if (!updatesScreenVisible) return;
         pendingUpdate = check.asset;
+        latestReleaseUrl = check.htmlUrl;
+        lastUpdateCheckLabel = "Hoy, " + new java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()).format(new java.util.Date());
         if (UpdateManager.compareVersions(installedTvVersion, check.latestVersion) >= 0) {
             showUpdateCurrent(host, check.latestVersion);
         } else if (check.asset == null) {
@@ -437,38 +459,38 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
 
     private void showUpdateCurrent(String host, String latest) {
         LinearLayout page = updatesPage("Comprueba si tienes la última versión de NIIVO.");
-        page.addView(settingsCard(1, "Versión instalada", installedTvVersion, true, v -> {}), updateCardLayout(dp(92), 10));
-        TextView current = text("✓  NIIVO está actualizado", 19, 0xFF2BE7BB, true);
-        current.setPadding(dp(10), dp(14), dp(8), 0);
-        page.addView(current);
-        TextView detail = text("Ya tienes la última versión disponible (" + latest + ").", 15, MUTED, false);
-        detail.setPadding(dp(10), dp(8), dp(8), dp(20));
-        page.addView(detail);
-        Button retry = button("Buscar nuevamente", true);
-        page.addView(retry, updateCardLayout(dp(58), 0));
+        page.addView(updateVersionCard(installedTvVersion, "Launcher para Fire TV", lastUpdateCheckLabel, "GitHub", updateChannel(latest), "AL DÍA", 0xFF0BA66E), updateCardLayout(dp(188), 14));
+        page.addView(updateStatusCard("NIIVO está actualizado", "Ya tienes la última versión disponible de NIIVO (" + latest + ").", 0xFF13C982, "✓"), updateCardLayout(dp(94), 12));
+        Button retry = button("⟳   Buscar actualizaciones", true);
+        page.addView(retry, updateCardLayout(dp(58), 10));
         retry.setOnClickListener(v -> checkUpdates(host));
+        Button changes = button("▤   Ver cambios recientes     ›", false);
+        page.addView(changes, updateCardLayout(dp(54), 0));
+        changes.setOnClickListener(v -> openLatestRelease());
         retry.requestFocus();
     }
 
     private void showUpdateAvailable(String host, String installed, UpdateManager.Release release) {
         LinearLayout page = updatesPage("Comprueba si tienes la última versión de NIIVO.");
-        page.addView(settingsCard(1, "Versión instalada", installed, true, v -> {}), updateCardLayout(dp(92), 10));
-        page.addView(settingsCard(9, "Nueva versión disponible", "Hay una nueva versión de NIIVO: " + release.version, false, v -> {}), updateCardLayout(dp(92), 12));
-        TextView versions = text("Instalada  " + installed + "                      Nueva  " + release.version, 14, MUTED, false);
-        versions.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams vlp = new LinearLayout.LayoutParams(-1, -2);
-        vlp.topMargin = dp(4); vlp.bottomMargin = dp(14); page.addView(versions, vlp);
-        Button update = button("Actualizar ahora", true);
-        page.addView(update, updateCardLayout(dp(60), 0));
+        page.addView(updateVersionCard(installed, "Launcher para Fire TV", lastUpdateCheckLabel, "GitHub", updateChannel(release.version), "NUEVA", 0xFF5420D9), updateCardLayout(dp(188), 12));
+        page.addView(updateStatusCard("Nueva versión disponible", "Versión " + release.version + "\nMejoras de rendimiento, correcciones y nuevas funciones.", PURPLE, "↑"), updateCardLayout(dp(112), 12));
+        Button update = button("⬇   Actualizar ahora", true);
+        page.addView(update, updateCardLayout(dp(58), 10));
         update.setOnClickListener(v -> startRemoteUpdate(host, release));
+        Button later = button("◷   Más tarde     ›", false);
+        page.addView(later, updateCardLayout(dp(54), 10));
+        later.setOnClickListener(v -> { updatesScreenVisible = false; showHome(); });
+        Button changes = button("▤   Ver cambios recientes     ›", false);
+        page.addView(changes, updateCardLayout(dp(54), 0));
+        changes.setOnClickListener(v -> openLatestRelease());
         update.requestFocus();
     }
 
     private void showUpdateUnavailable(String host, String installed, String latest) {
         LinearLayout page = updatesPage("Comprueba si tienes la última versión de NIIVO.");
-        page.addView(settingsCard(1, "Versión instalada", installed, true, v -> {}), updateCardLayout(dp(92), 12));
-        page.addView(settingsCard(9, "Actualización no disponible", "La versión " + latest + " está publicada, pero todavía no hay un APK instalador válido.", false, v -> {}), updateCardLayout(dp(104), 16));
-        Button retry = button("Buscar nuevamente", true);
+        page.addView(updateVersionCard(installed, "Launcher para Fire TV", lastUpdateCheckLabel, "GitHub", updateChannel(latest), "PUBLICADA", 0xFF5420D9), updateCardLayout(dp(188), 14));
+        page.addView(updateStatusCard("APK no disponible", "La versión " + latest + " está publicada, pero no contiene un APK de NIIVO válido.", 0xFFEEA62A, "!"), updateCardLayout(dp(104), 16));
+        Button retry = button("⟳   Buscar actualizaciones", true);
         page.addView(retry, updateCardLayout(dp(58), 0));
         retry.setOnClickListener(v -> checkUpdates(host)); retry.requestFocus();
     }
@@ -477,17 +499,19 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
         runOnUiThread(() -> {
             if (!updatesScreenVisible) return;
             LinearLayout page = updatesPage("Comprueba si tienes la última versión de NIIVO.");
-            page.addView(settingsCard(7, title, detail, false, v -> {}), updateCardLayout(dp(112), 18));
+            page.addView(updateVersionCard("No comprobada", "No se pudo leer la versión instalada", "—", "GitHub", "—", "ERROR", 0xFF81254C), updateCardLayout(dp(188), 14));
+            page.addView(updateStatusCard(title, detail, 0xFFEF6676, "!"), updateCardLayout(dp(112), 14));
             if (fireTvConnectionProblem) {
                 TextView help = text("Comprueba que Fire TV y el teléfono estén en la misma Wi‑Fi, activa Depuración ADB en la TV y acepta el aviso de autorización.", 14, MUTED, false);
-                help.setPadding(dp(10), 0, dp(8), dp(14));
+                help.setLineSpacing(dp(3), 1f);
+                help.setPadding(dp(8), 0, dp(8), dp(14));
                 page.addView(help);
             }
-            Button retry = button("Reintentar", true);
+            Button retry = button("⟳   Reintentar", true);
             page.addView(retry, updateCardLayout(dp(58), fireTvConnectionProblem ? 8 : 0));
             retry.setOnClickListener(v -> checkUpdates(host));
             if (fireTvConnectionProblem) {
-                Button reconnect = button("Conectar o cambiar IP", false);
+                Button reconnect = button("Conectar o cambiar IP     ›", false);
                 page.addView(reconnect, updateCardLayout(dp(58), 0));
                 reconnect.setOnClickListener(v -> showUpdateHostDialog());
                 reconnect.requestFocus();
@@ -495,6 +519,130 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
                 retry.requestFocus();
             }
         });
+    }
+
+    private String updateChannel(String version) {
+        return version != null && version.toLowerCase(java.util.Locale.ROOT).contains("beta") ? "Beta" : "Estable";
+    }
+
+    private void openLatestRelease() {
+        String url = latestReleaseUrl;
+        if (url == null || url.trim().isEmpty()) {
+            Toast.makeText(this, "No hay una publicación reciente para mostrar.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        try { startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))); }
+        catch (Exception ex) { Toast.makeText(this, "No se pudo abrir GitHub.", Toast.LENGTH_SHORT).show(); }
+    }
+
+    private LinearLayout updateVersionCard(String version, String description, String checkedAt,
+                                           String repository, String channel, String badge, int badgeColor) {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(14), dp(13), dp(14), dp(12));
+        card.setBackground(successOutline(dp(19)));
+
+        LinearLayout top = new LinearLayout(this);
+        top.setGravity(Gravity.CENTER_VERTICAL);
+        android.widget.FrameLayout logoTile = new android.widget.FrameLayout(this);
+        logoTile.setBackground(round(0xB807152A, dp(16), 0x334780C0, dp(1)));
+        ImageView logo = new ImageView(this);
+        logo.setImageResource(R.drawable.nivo_update_mark);
+        logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        logo.setBackgroundColor(Color.TRANSPARENT);
+        android.widget.FrameLayout.LayoutParams logoLp = new android.widget.FrameLayout.LayoutParams(dp(50), dp(50), Gravity.CENTER);
+        logoTile.addView(logo, logoLp);
+        top.addView(logoTile, new LinearLayout.LayoutParams(dp(68), dp(68)));
+
+        LinearLayout info = new LinearLayout(this);
+        info.setOrientation(LinearLayout.VERTICAL);
+        info.setPadding(dp(12), 0, dp(5), 0);
+        TextView label = text("Versión instalada", 13, MUTED, false);
+        info.addView(label);
+        TextView value = text(version, 18, WHITE, true);
+        LinearLayout.LayoutParams valueLp = new LinearLayout.LayoutParams(-1, -2);
+        valueLp.topMargin = dp(3);
+        info.addView(value, valueLp);
+        TextView caption = text(description, 12, MUTED, false);
+        LinearLayout.LayoutParams captionLp = new LinearLayout.LayoutParams(-1, -2);
+        captionLp.topMargin = dp(3);
+        info.addView(caption, captionLp);
+        top.addView(info, new LinearLayout.LayoutParams(0, -2, 1f));
+
+        TextView chip = text(badge, 10, WHITE, true);
+        chip.setGravity(Gravity.CENTER);
+        chip.setPadding(dp(8), dp(7), dp(8), dp(7));
+        chip.setBackground(round(badgeColor, dp(14), 0, 0));
+        top.addView(chip, new LinearLayout.LayoutParams(-2, -2));
+        card.addView(top);
+
+        View divider = new View(this);
+        divider.setBackgroundColor(0x334A70AA);
+        LinearLayout.LayoutParams dividerLp = new LinearLayout.LayoutParams(-1, dp(1));
+        dividerLp.topMargin = dp(12);
+        dividerLp.bottomMargin = dp(9);
+        card.addView(divider, dividerLp);
+
+        LinearLayout metadata = new LinearLayout(this);
+        metadata.setGravity(Gravity.CENTER_VERTICAL);
+        addUpdateMeta(metadata, "Última comprobación", checkedAt);
+        addUpdateMetaDivider(metadata);
+        addUpdateMeta(metadata, "Repositorio", repository);
+        addUpdateMetaDivider(metadata);
+        addUpdateMeta(metadata, "Canal", channel);
+        card.addView(metadata, new LinearLayout.LayoutParams(-1, dp(43)));
+        return card;
+    }
+
+    private void addUpdateMeta(LinearLayout row, String title, String value) {
+        LinearLayout cell = new LinearLayout(this);
+        cell.setOrientation(LinearLayout.VERTICAL);
+        cell.setGravity(Gravity.CENTER_VERTICAL);
+        TextView label = text(title, 9, MUTED, false);
+        label.setMaxLines(1);
+        label.setSingleLine(true);
+        label.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        cell.addView(label);
+        TextView content = text(value, 12, WHITE, false);
+        content.setMaxLines(1);
+        content.setSingleLine(true);
+        content.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        LinearLayout.LayoutParams contentLp = new LinearLayout.LayoutParams(-1, -2);
+        contentLp.topMargin = dp(2);
+        cell.addView(content, contentLp);
+        row.addView(cell, new LinearLayout.LayoutParams(0, -1, 1f));
+    }
+
+    private void addUpdateMetaDivider(LinearLayout row) {
+        View divider = new View(this);
+        divider.setBackgroundColor(0x443F6193);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(1), dp(34));
+        lp.setMargins(dp(7), 0, dp(7), 0);
+        row.addView(divider, lp);
+    }
+
+    private LinearLayout updateStatusCard(String title, String detail, int accent, String symbol) {
+        LinearLayout card = new LinearLayout(this);
+        card.setGravity(Gravity.CENTER_VERTICAL);
+        card.setPadding(dp(14), dp(13), dp(14), dp(13));
+        card.setBackground(glassPanel(dp(18)));
+        TextView icon = text(symbol, 27, WHITE, true);
+        icon.setGravity(Gravity.CENTER);
+        icon.setBackground(round(accent, dp(28), 0, 0));
+        LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(dp(48), dp(48));
+        iconLp.rightMargin = dp(12);
+        card.addView(icon, iconLp);
+        LinearLayout copy = new LinearLayout(this);
+        copy.setOrientation(LinearLayout.VERTICAL);
+        TextView heading = text(title, 16, WHITE, true);
+        copy.addView(heading);
+        TextView body = text(detail, 13, MUTED, false);
+        body.setLineSpacing(dp(2), 1f);
+        LinearLayout.LayoutParams bodyLp = new LinearLayout.LayoutParams(-1, -2);
+        bodyLp.topMargin = dp(4);
+        copy.addView(body, bodyLp);
+        card.addView(copy, new LinearLayout.LayoutParams(0, -2, 1f));
+        return card;
     }
 
     private LinearLayout.LayoutParams updateCardLayout(int height, int bottom) {
@@ -551,7 +699,8 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
 
     private void showUpdateDownloading(UpdateManager.Release release, long downloaded, long total) {
         LinearLayout page = updatesPage("Descargando la versión " + release.version + ".");
-        page.addView(settingsCard(9, "Actualizando NIIVO", "Descargando nueva versión " + release.version + "…", true, v -> {}), updateCardLayout(dp(94), 18));
+        page.addView(updateVersionCard(installedTvVersion, "Launcher para Fire TV", lastUpdateCheckLabel, "GitHub", updateChannel(release.version), "ACTUALIZANDO", 0xFF5420D9), updateCardLayout(dp(188), 14));
+        page.addView(updateStatusCard("Actualizando NIIVO", "Descargando la versión " + release.version + "…", BLUE, "⟳"), updateCardLayout(dp(96), 2));
         updateProgressBar = new android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         updateProgressBar.setMax(1000);
         updateProgressBar.setProgressDrawable(updateProgressDrawable());
@@ -597,9 +746,10 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
         runOnUiThread(() -> {
             if (!updatesScreenVisible) return;
             LinearLayout page = updatesPage("Instalando la versión " + version + " en Fire TV.");
-            page.addView(settingsCard(9, "Instalando NIIVO", "Fire TV está aplicando la actualización…", true, v -> {}), updateCardLayout(dp(94), 16));
-            android.widget.ProgressBar spinner = new android.widget.ProgressBar(this); spinner.setIndeterminate(true);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(40), dp(40)); lp.gravity = Gravity.CENTER_HORIZONTAL; lp.topMargin = dp(30); page.addView(spinner, lp);
+            page.addView(updateVersionCard(installedTvVersion, "Launcher para Fire TV", lastUpdateCheckLabel, "GitHub", updateChannel(version), "INSTALANDO", 0xFF5420D9), updateCardLayout(dp(188), 20));
+            page.addView(updateStatusCard("Instalando NIIVO", "Fire TV está aplicando la actualización…", BLUE, "⟳"), updateCardLayout(dp(98), 20));
+            UpdateRingView spinner = new UpdateRingView(this);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(54), dp(54)); lp.gravity = Gravity.CENTER_HORIZONTAL; page.addView(spinner, lp);
         });
     }
 
@@ -607,77 +757,44 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
         if (!updatesScreenVisible) return;
         installedTvVersion = version;
         LinearLayout page = updatesPage("NIIVO se actualizó correctamente en el Fire TV.");
-        page.addView(settingsCard(1, "NIIVO está actualizado", "Versión " + version, true, v -> {}), updateCardLayout(dp(94), 20));
+        page.addView(updateVersionCard(version, "Launcher para Fire TV", lastUpdateCheckLabel, "GitHub", updateChannel(version), "AL DÍA", 0xFF0BA66E), updateCardLayout(dp(188), 18));
+        SuccessRingView success = new SuccessRingView(this);
+        LinearLayout.LayoutParams ringLp = new LinearLayout.LayoutParams(dp(86), dp(86)); ringLp.gravity = Gravity.CENTER_HORIZONTAL; ringLp.topMargin = dp(12); ringLp.bottomMargin = dp(12);
+        page.addView(success, ringLp);
+        page.addView(updateStatusCard("¡Actualizado!", "Fire TV confirmó que NIIVO " + version + " quedó instalado.", 0xFF13C982, "✓"), updateCardLayout(dp(96), 18));
         Button done = button("Listo", true); page.addView(done, updateCardLayout(dp(58), 0));
-        done.setOnClickListener(v -> showHome()); done.requestFocus();
+        done.setOnClickListener(v -> { updatesScreenVisible = false; showHome(); }); done.requestFocus();
     }
     private void showSettings() {
         updatesScreenVisible = false;
         settingsScreenVisible = true;
         settingsDetailVisible = false;
+        installerScreenVisible = false;
         keepDataOnUninstall = getPreferences(MODE_PRIVATE).getBoolean("keep_data", true);
         LinearLayout page = newPage();
-        page.setPadding(dp(16), dp(8), dp(16), dp(24));
+        page.setBackground(homeGradient());
+        page.setPadding(dp(18), dp(18), dp(18), dp(26));
+        addSettingsHeader(page, "Configuración", "Personaliza NIIVO a tu gusto.", this::showHome);
 
-        TextView back = text("‹", 32, WHITE, false);
-        back.setGravity(Gravity.CENTER);
-        back.setContentDescription("Regresar");
-        back.setOnClickListener(v -> showHome());
-        page.addView(back, new LinearLayout.LayoutParams(dp(48), dp(48)));
-
-        TextView title = text("Configuración", 31, WHITE, true);
-        title.setPadding(dp(8), 0, 0, 0);
-        LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(-1, -2);
-        titleLp.topMargin = dp(9);
-        page.addView(title, titleLp);
-
-        TextView subtitle = text("Ajustes y preferencias de NIIVO.", 16, MUTED, false);
-        subtitle.setPadding(dp(8), 0, 0, 0);
-        LinearLayout.LayoutParams subtitleLp = new LinearLayout.LayoutParams(-1, -2);
-        subtitleLp.topMargin = dp(5);
-        subtitleLp.bottomMargin = dp(20);
-        page.addView(subtitle, subtitleLp);
-
-        LinearLayout launcherCard = settingsCard(4, "Launcher predeterminado",
-                "Comprobando Fire TV…", true, v -> onLauncherCardSelected(launcherCardHolder[0], launcherStatusHolder[0]));
-        launcherCardHolder[0] = launcherCard;
-        TextView launcherStatus = (TextView) ((LinearLayout) launcherCard.getChildAt(1)).getChildAt(1);
-        launcherStatusHolder[0] = launcherStatus;
-        LinearLayout.LayoutParams cardLp = new LinearLayout.LayoutParams(-1, dp(80));
-        cardLp.bottomMargin = dp(8);
-        page.addView(launcherCard, cardLp);
-
-        LinearLayout keepCard = settingsCard(5, "Mantener datos",
-                "Conservar configuración y preferencias", false,
-                v -> showKeepDataSettings());
-        cardLp = new LinearLayout.LayoutParams(-1, dp(80));
-        cardLp.bottomMargin = dp(8);
-        page.addView(keepCard, cardLp);
-
-        LinearLayout versionCard = settingsCard(6, "Versión",
-                getEmbeddedLauncherVersion(), false, v -> showVersionSettings());
-        cardLp = new LinearLayout.LayoutParams(-1, dp(80));
-        cardLp.bottomMargin = dp(8);
-        page.addView(versionCard, cardLp);
-
+        LinearLayout adbCard = settingsCard(11, "Mantener ADB",
+                "Mantiene activo el acceso ADB después de reiniciar.", true, v -> showAdbSettings());
+        page.addView(adbCard, settingsOptionLayout());
+        LinearLayout privacyCard = settingsCard(25, "Privacidad",
+                "Gestiona tus datos y preferencias de privacidad.", false, v -> showPrivacySettings());
+        page.addView(privacyCard, settingsOptionLayout());
+        LinearLayout supportCard = settingsCard(22, "Soporte",
+                "Obtén ayuda, reporta un problema o contáctanos.", false, v -> showSupportSettings());
+        page.addView(supportCard, settingsOptionLayout());
         LinearLayout aboutCard = settingsCard(7, "Acerca de",
-                "Información sobre NIIVO", false, v -> showAboutSettings());
-        cardLp = new LinearLayout.LayoutParams(-1, dp(80));
-        cardLp.bottomMargin = dp(8);
-        page.addView(aboutCard, cardLp);
+                "Versión, información legal y créditos.", false, v -> showAboutSettings());
+        page.addView(aboutCard, settingsOptionLayout());
+        adbCard.requestFocus();
+    }
 
-        LinearLayout privacyCard = settingsCard(8, "Privacidad",
-                "Privacidad y permisos", false, v -> showPrivacySettings());
-        page.addView(privacyCard, new LinearLayout.LayoutParams(-1, dp(80)));
-
-        String host = getPreferences(MODE_PRIVATE).getString("last_fire_tv_host", "");
-        if (host.isEmpty()) {
-            launcherStatus.setText("Conecta un Fire TV para comprobar");
-            launcherCard.setTag(Boolean.FALSE);
-        } else {
-            refreshLauncherStatus(host, launcherCard, launcherStatus);
-        }
-        launcherCard.requestFocus();
+    private LinearLayout.LayoutParams settingsOptionLayout() {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(86));
+        lp.bottomMargin = dp(10);
+        return lp;
     }
 
     private final LinearLayout[] launcherCardHolder = new LinearLayout[1];
@@ -687,17 +804,20 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
                                       View.OnClickListener click) {
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(11), dp(8), dp(11), dp(8));
+        row.setPadding(dp(9), dp(8), dp(11), dp(8));
         row.setBackground(highlighted ? installerCardPanel(dp(19)) : glassPanel(dp(19)));
 
         ActionIconView iconView = new ActionIconView(this, icon);
-        iconView.setBackground(round(0x4421385D, dp(30), 0x333D7EBE, dp(1)));
-        row.addView(iconView, new LinearLayout.LayoutParams(dp(52), dp(52)));
+        row.addView(iconView, new LinearLayout.LayoutParams(dp(58), dp(58)));
+        View divider = new View(this);
+        divider.setBackgroundColor(highlighted ? 0x8A238DFF : 0x55236AC1);
+        LinearLayout.LayoutParams dividerLp = new LinearLayout.LayoutParams(dp(1), dp(54));
+        dividerLp.setMargins(dp(6), 0, dp(13), 0);
+        row.addView(divider, dividerLp);
 
         LinearLayout labels = new LinearLayout(this);
         labels.setOrientation(LinearLayout.VERTICAL);
         LinearLayout.LayoutParams labelsLp = new LinearLayout.LayoutParams(0, -2, 1f);
-        labelsLp.leftMargin = dp(12);
         row.addView(labels, labelsLp);
         labels.addView(text(title, 16, WHITE, true));
         TextView sub = text(subtitle, 13, MUTED, false);
@@ -833,79 +953,159 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
         return "Versión no disponible";
     }
 
-    private void addSettingsBack(LinearLayout page) {
-        TextView back = text("‹", 32, WHITE, false);
+    private String getInstallerVersion() {
+        try {
+            android.content.pm.PackageInfo info = getPackageManager().getPackageInfo(getPackageName(), 0);
+            if (info.versionName != null && !info.versionName.isEmpty()) return "Versión " + info.versionName;
+        } catch (Exception ignored) {}
+        return "Versión no disponible";
+    }
+
+    private void addSettingsHeader(LinearLayout page, String title, String subtitle) {
+        addSettingsHeader(page, title, subtitle, this::showSettings);
+    }
+
+    private void addSettingsHeader(LinearLayout page, String title, String subtitle, Runnable backAction) {
+        LinearLayout top = new LinearLayout(this);
+        top.setGravity(Gravity.CENTER_VERTICAL);
+        TextView back = text("‹", 31, WHITE, false);
         back.setGravity(Gravity.CENTER);
         back.setContentDescription("Regresar");
-        back.setOnClickListener(v -> showSettings());
-        page.addView(back, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        back.setBackground(round(0x55204068, dp(26), 0x334C84C0, dp(1)));
+        back.setFocusable(true);
+        back.setClickable(true);
+        back.setOnClickListener(v -> backAction.run());
+        top.addView(back, new LinearLayout.LayoutParams(dp(42), dp(42)));
+
+        View mark = new NivoMarkView(this);
+        LinearLayout.LayoutParams markLp = new LinearLayout.LayoutParams(dp(39), dp(39));
+        markLp.leftMargin = dp(15);
+        top.addView(mark, markLp);
+        LinearLayout brandText = new LinearLayout(this);
+        brandText.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams brandLp = new LinearLayout.LayoutParams(-2, -2);
+        brandLp.leftMargin = dp(8);
+        top.addView(brandText, brandLp);
+        brandText.addView(text("NIIVO", 17, WHITE, true));
+        TextView launcher = text("L A U N C H E R", 8, MUTED, false);
+        launcher.setLetterSpacing(0.08f);
+        brandText.addView(launcher);
+        page.addView(top, new LinearLayout.LayoutParams(-1, dp(48)));
+
+        TextView heading = text(title, 28, WHITE, true);
+        LinearLayout.LayoutParams headingLp = new LinearLayout.LayoutParams(-1, -2);
+        headingLp.topMargin = dp(23);
+        page.addView(heading, headingLp);
+        TextView description = text(subtitle, 15, MUTED, false);
+        description.setLineSpacing(dp(3), 1f);
+        LinearLayout.LayoutParams descriptionLp = new LinearLayout.LayoutParams(-1, -2);
+        descriptionLp.topMargin = dp(6);
+        descriptionLp.bottomMargin = dp(19);
+        page.addView(description, descriptionLp);
+    }
+
+    private LinearLayout submenuCard(int icon, String title, String subtitle, View.OnClickListener click) {
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(12), dp(10), dp(10), dp(10));
+        row.setBackground(glassPanel(dp(17)));
+        ActionIconView image = new ActionIconView(this, icon);
+        row.addView(image, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        View divider = new View(this);
+        divider.setBackgroundColor(0x663879B7);
+        LinearLayout.LayoutParams dividerLp = new LinearLayout.LayoutParams(dp(1), dp(43));
+        dividerLp.leftMargin = dp(10);
+        dividerLp.rightMargin = dp(12);
+        row.addView(divider, dividerLp);
+        LinearLayout labels = new LinearLayout(this);
+        labels.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams labelsLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        row.addView(labels, labelsLp);
+        labels.addView(text(title, 16, WHITE, true));
+        TextView detail = text(subtitle, 13, MUTED, false);
+        detail.setLineSpacing(dp(2), 1f);
+        LinearLayout.LayoutParams detailLp = new LinearLayout.LayoutParams(-1, -2);
+        detailLp.topMargin = dp(3);
+        labels.addView(detail, detailLp);
+        TextView arrow = text("›", 28, 0xFFD4DDF4, false);
+        arrow.setGravity(Gravity.CENTER);
+        row.addView(arrow, new LinearLayout.LayoutParams(dp(25), -1));
+        LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(-1, dp(82));
+        rowLp.bottomMargin = dp(9);
+        row.setLayoutParams(rowLp);
+        row.setFocusable(true);
+        row.setClickable(true);
+        row.setOnClickListener(click);
+        row.setOnFocusChangeListener((view, focused) -> {
+            row.setBackground(focused ? installerCardPanel(dp(17)) : glassPanel(dp(17)));
+            float scale = focused ? 1.015f : 1f;
+            row.animate().scaleX(scale).scaleY(scale).setDuration(120).start();
+        });
+        return row;
     }
 
     private void showVersionSettings() {
         settingsDetailVisible = true;
         LinearLayout page = newPage();
-        addSettingsBack(page);
-        TextView title = text("Versión", 28, WHITE, true);
-        title.setPadding(dp(8), 0, 0, 0);
-        LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(-1, -2);
-        titleLp.topMargin = dp(18);
-        page.addView(title, titleLp);
-        TextView version = text(getEmbeddedLauncherVersion(), 17, MUTED, false);
-        version.setPadding(dp(8), dp(20), 0, 0);
-        page.addView(version);
+        addSettingsHeader(page, "Versión", "Información de la versión incluida en este instalador.");
+        page.addView(submenuCard(6, "NIIVO Launcher", getEmbeddedLauncherVersion(), v ->
+                showInfoDialog("Versión de NIIVO", "Esta es la versión real del launcher incluida en el instalador.")));
+        page.addView(submenuCard(7, "Instalador NIIVO", getInstallerVersion(), v ->
+                showInfoDialog("Instalador NIIVO", getInstallerVersion())));
     }
 
     private void showAboutSettings() {
         settingsDetailVisible = true;
         LinearLayout page = newPage();
-        addSettingsBack(page);
-        TextView title = text("Acerca de NIIVO", 28, WHITE, true);
-        title.setPadding(dp(8), 0, 0, 0);
-        LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(-1, -2);
-        titleLp.topMargin = dp(18);
-        page.addView(title, titleLp);
-        TextView name = text("NIIVO", 18, WHITE, true);
-        name.setPadding(dp(8), dp(24), 0, 0);
-        page.addView(name);
-        TextView version = text(getEmbeddedLauncherVersion(), 15, MUTED, false);
-        version.setPadding(dp(8), dp(8), 0, 0);
-        page.addView(version);
-        TextView about = text("Launcher para Amazon Fire TV. NIIVO se instala y actualiza desde tu teléfono mediante una conexión ADB local.", 15, MUTED, false);
-        about.setLineSpacing(dp(3), 1f);
-        about.setPadding(dp(8), dp(18), 0, 0);
-        page.addView(about);
+        addSettingsHeader(page, "Acerca de", "Versión, información legal y créditos.");
+
+        LinearLayout brandCard = new LinearLayout(this);
+        brandCard.setGravity(Gravity.CENTER_VERTICAL);
+        brandCard.setPadding(dp(13), dp(12), dp(13), dp(12));
+        brandCard.setBackground(installerCardPanel(dp(17)));
+        ImageView appIcon = new ImageView(this);
+        appIcon.setImageResource(R.drawable.installer_icon_foreground);
+        appIcon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        brandCard.addView(appIcon, new LinearLayout.LayoutParams(dp(58), dp(58)));
+        LinearLayout brandLabels = new LinearLayout(this);
+        brandLabels.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams brandLabelsLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        brandLabelsLp.leftMargin = dp(12);
+        brandCard.addView(brandLabels, brandLabelsLp);
+        brandLabels.addView(text("NIIVO Launcher", 16, WHITE, true));
+        brandLabels.addView(text(getEmbeddedLauncherVersion(), 13, MUTED, false));
+        brandLabels.addView(text("Tu Fire TV, a tu manera.", 13, MUTED, false));
+        LinearLayout.LayoutParams brandCardLp = new LinearLayout.LayoutParams(-1, dp(88));
+        brandCardLp.bottomMargin = dp(10);
+        page.addView(brandCard, brandCardLp);
+
+        page.addView(submenuCard(17, "Licencias", "Software de terceros", v -> showThirdPartyLicenses()));
+        page.addView(submenuCard(18, "Política de privacidad", "Lee nuestra política", v -> showPrivacyNotice()));
+        page.addView(submenuCard(17, "Términos de uso", "Condiciones de uso", v -> showTermsNotice()));
+        page.addView(submenuCard(19, "Créditos", "Agradecimientos", v ->
+                showInfoDialog("Créditos", "NIIVO Launcher\nDesarrollado por isaacguzmanr.\n\nGracias a las bibliotecas de código abierto incluidas en este proyecto.")));
     }
 
     private void showPrivacySettings() {
         settingsDetailVisible = true;
         LinearLayout page = newPage();
-        addSettingsBack(page);
-        TextView title = text("Privacidad y permisos", 27, WHITE, true);
-        title.setPadding(dp(8), 0, 0, 0);
-        LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(-1, -2);
-        titleLp.topMargin = dp(18);
-        page.addView(title, titleLp);
-        TextView details = text("NIIVO utiliza la red local para encontrar el Fire TV y conectarse mediante ADB cuando instalas, actualizas o abres el launcher. La clave ADB se guarda en el almacenamiento privado de esta app. " +
-                "Permisos usados: acceso a Internet y estado de Wi‑Fi/red.", 15, MUTED, false);
-        details.setLineSpacing(dp(4), 1f);
-        details.setPadding(dp(8), dp(20), 0, 0);
-        page.addView(details);
+        addSettingsHeader(page, "Privacidad", "Gestiona tus datos y preferencias de privacidad.");
+        page.addView(submenuCard(14, "Permisos de la app", "Revisa los permisos otorgados", v -> openAppPermissions()));
+        page.addView(submenuCard(15, "Recolección de datos", "Controla qué datos se recopilan", v ->
+                showInfoDialog("Recolección de datos", "NIIVO Installer no integra analítica ni publicidad. Guarda localmente la IP del Fire TV y la clave de autorización ADB para facilitar futuras conexiones. La búsqueda de dispositivos y la instalación se realizan desde el teléfono hacia el Fire TV por la red local. Al comprobar versiones o descargar actualizaciones, la app se conecta a GitHub.")));
+        page.addView(submenuCard(2, "Eliminar datos", "Borra datos y configuraciones", v -> confirmClearInstallerData(true)));
+        page.addView(submenuCard(20, "Restablecer aplicación", "Vuelve al estado inicial", v -> confirmClearInstallerData(false)));
     }
 
     private void showKeepDataSettings() {
         settingsDetailVisible = true;
         LinearLayout page = newPage();
-        addSettingsBack(page);
-        TextView title = text("Mantener datos", 28, WHITE, true);
-        title.setPadding(dp(8), 0, 0, 0);
-        LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(-1, -2);
-        titleLp.topMargin = dp(18);
-        page.addView(title, titleLp);
-        TextView explanation = text("Conserva configuración y preferencias al desinstalar NIIVO. Las actualizaciones con ADB mantienen los datos de la aplicación.", 15, MUTED, false);
+        addSettingsHeader(page, "Mantener datos", "Conserva las preferencias de NIIVO Installer.");
+        TextView explanation = text("Las actualizaciones de NIIVO se instalan sobre la versión existente y conservan los datos del launcher. Esta preferencia se aplica al proceso de desinstalación iniciado desde el instalador.", 15, MUTED, false);
         explanation.setLineSpacing(dp(4), 1f);
-        explanation.setPadding(dp(8), dp(12), 0, dp(16));
-        page.addView(explanation);
-
+        LinearLayout.LayoutParams explanationLp = new LinearLayout.LayoutParams(-1, -2);
+        explanationLp.bottomMargin = dp(16);
+        page.addView(explanation, explanationLp);
         android.widget.Switch keepSwitch = new android.widget.Switch(this);
         keepSwitch.setText("Conservar datos al desinstalar");
         keepSwitch.setTextColor(WHITE);
@@ -917,72 +1117,403 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
         });
         page.addView(keepSwitch);
     }
+
+    private void showAdbSettings() {
+        settingsDetailVisible = true;
+        LinearLayout page = newPage();
+        addSettingsHeader(page, "Mantener ADB", "Mantiene activo el acceso ADB después de reiniciar.");
+        String host = getPreferences(MODE_PRIVATE).getString("last_fire_tv_host", "").trim();
+        TextView adbStatus = text(host.isEmpty() ? "Conecta un Fire TV para comprobar el estado." : "Comprobando Fire TV…", 12, MUTED, false);
+        android.widget.Switch adbSwitch = new android.widget.Switch(this);
+        adbSwitch.setText("Mantener ADB");
+        adbSwitch.setTextColor(WHITE);
+        adbSwitch.setTextSize(16);
+        adbSwitch.setEnabled(false);
+        adbSwitch.setTrackTintList(android.content.res.ColorStateList.valueOf(0xFF168ED7));
+        adbSwitch.setThumbTintList(android.content.res.ColorStateList.valueOf(WHITE));
+
+        LinearLayout toggleCard = new LinearLayout(this);
+        toggleCard.setGravity(Gravity.CENTER_VERTICAL);
+        toggleCard.setPadding(dp(13), dp(10), dp(12), dp(10));
+        toggleCard.setBackground(installerCardPanel(dp(17)));
+        ActionIconView usb = new ActionIconView(this, 11);
+        toggleCard.addView(usb, new LinearLayout.LayoutParams(dp(47), dp(47)));
+        View divider = new View(this);
+        divider.setBackgroundColor(0x663879B7);
+        LinearLayout.LayoutParams dividerLp = new LinearLayout.LayoutParams(dp(1), dp(42));
+        dividerLp.leftMargin = dp(10);
+        dividerLp.rightMargin = dp(12);
+        toggleCard.addView(divider, dividerLp);
+        LinearLayout toggleText = new LinearLayout(this);
+        toggleText.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams toggleTextLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        toggleCard.addView(toggleText, toggleTextLp);
+        toggleText.addView(text("Mantener ADB", 15, WHITE, true));
+        adbStatus.setText(host.isEmpty() ? "Conecta un Fire TV para comprobar" : "Activar después de reiniciar");
+        LinearLayout.LayoutParams toggleSubLp = new LinearLayout.LayoutParams(-1, -2);
+        toggleSubLp.topMargin = dp(3);
+        toggleText.addView(adbStatus, toggleSubLp);
+        toggleCard.addView(adbSwitch, new LinearLayout.LayoutParams(-2, -2));
+        LinearLayout.LayoutParams toggleCardLp = new LinearLayout.LayoutParams(-1, dp(80));
+        toggleCardLp.bottomMargin = dp(9);
+        page.addView(toggleCard, toggleCardLp);
+
+        page.addView(submenuCard(12, "Estado actual", "Comprobando Fire TV…", v -> refreshAdbState(host, adbSwitch, adbStatus, (TextView) ((LinearLayout) v).findViewWithTag("adb-subtitle"))));
+        LinearLayout stateCard = (LinearLayout) page.getChildAt(page.getChildCount() - 1);
+        TextView stateLabel = (TextView) ((LinearLayout) stateCard.getChildAt(2)).getChildAt(1);
+        stateLabel.setTag("adb-subtitle");
+        stateLabel.setText(host.isEmpty() ? "Conecta Fire TV para ver su estado" : "Comprobando Fire TV…");
+        page.addView(submenuCard(12, "Aplicar ahora", "Activa la depuración ADB", v -> setFireAdbEnabled(host, true, adbSwitch, adbStatus)));
+        adbStatus.setLineSpacing(dp(3), 1f);
+        LinearLayout note = new LinearLayout(this);
+        note.setPadding(dp(14), dp(12), dp(14), dp(12));
+        note.setBackground(glassPanel(dp(15)));
+        note.addView(text("i", 17, MUTED, true));
+        TextView noteText = text("El ajuste se comprueba directamente en el Fire TV. El sistema puede requerir que vuelvas a autorizar la conexión ADB.", 12, MUTED, false);
+        noteText.setLineSpacing(dp(3), 1f);
+        LinearLayout.LayoutParams noteTextLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        noteTextLp.leftMargin = dp(10);
+        note.addView(noteText, noteTextLp);
+        LinearLayout.LayoutParams noteLp = new LinearLayout.LayoutParams(-1, -2);
+        noteLp.topMargin = dp(5);
+        page.addView(note, noteLp);
+
+        adbSwitch.setOnCheckedChangeListener((button, checked) -> setFireAdbEnabled(host, checked, adbSwitch, adbStatus));
+        if (host.isEmpty()) adbStatus.setText("Conecta un Fire TV para comprobar el estado.");
+        else refreshAdbState(host, adbSwitch, adbStatus, stateLabel);
+    }
+
+    private void refreshAdbState(String host, android.widget.Switch toggle, TextView statusLabel, TextView stateLabel) {
+        if (host == null || host.isEmpty()) {
+            statusLabel.setText("Conecta un Fire TV para comprobar el estado.");
+            if (stateLabel != null) stateLabel.setText("Conecta Fire TV para ver su estado");
+            return;
+        }
+        if (stateLabel != null) stateLabel.setText("Comprobando Fire TV…");
+        toggle.setEnabled(false);
+        WORK.execute(() -> {
+            AdbConnection connection = null;
+            try {
+                connection = connect(host);
+                String value = runShell(connection, "settings get global adb_enabled").trim();
+                boolean enabled = value.endsWith("1");
+                runOnUiThread(() -> {
+                    if (statusLabel.getParent() == null) return;
+                    statusLabel.setText(enabled ? "ADB activo en Fire TV" : "ADB desactivado en Fire TV");
+                    if (stateLabel != null) stateLabel.setText(enabled ? "ADB activo" : "ADB desactivado");
+                    toggle.setOnCheckedChangeListener(null);
+                    toggle.setChecked(enabled);
+                    toggle.setEnabled(true);
+                    toggle.setOnCheckedChangeListener((button, checked) -> setFireAdbEnabled(host, checked, toggle, statusLabel));
+                });
+            } catch (Exception ex) {
+                runOnUiThread(() -> {
+                    if (statusLabel.getParent() == null) return;
+                    statusLabel.setText("No se pudo comprobar ADB: " + clean(ex.getMessage()));
+                    if (stateLabel != null) stateLabel.setText("No se pudo comprobar el estado");
+                    toggle.setEnabled(false);
+                });
+            } finally {
+                if (connection != null) try { connection.close(); } catch (Exception ignored) {}
+            }
+        });
+    }
+
+    private void setFireAdbEnabled(String host, boolean enabled, android.widget.Switch toggle, TextView statusLabel) {
+        if (host == null || host.isEmpty()) {
+            toggle.setOnCheckedChangeListener(null);
+            toggle.setChecked(false);
+            toggle.setEnabled(false);
+            statusLabel.setText("Conecta un Fire TV para cambiar ADB.");
+            Toast.makeText(this, "Conecta el Fire TV desde Instalar para administrar ADB.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        toggle.setEnabled(false);
+        statusLabel.setText(enabled ? "Activando ADB en Fire TV…" : "Desactivando ADB en Fire TV…");
+        WORK.execute(() -> {
+            AdbConnection connection = null;
+            try {
+                connection = connect(host);
+                String expected = enabled ? "1" : "0";
+                String result = runShell(connection, "settings put global adb_enabled " + expected + "; settings get global adb_enabled").trim();
+                if (!result.endsWith(expected)) throw new IOException("Fire TV no confirmó el cambio de ADB.");
+                runOnUiThread(() -> {
+                    if (statusLabel.getParent() == null) return;
+                    statusLabel.setText(enabled ? "ADB activo en Fire TV" : "ADB desactivado en Fire TV");
+                    toggle.setOnCheckedChangeListener(null);
+                    toggle.setChecked(enabled);
+                    toggle.setEnabled(true);
+                    toggle.setOnCheckedChangeListener((button, checked) -> setFireAdbEnabled(host, checked, toggle, statusLabel));
+                });
+            } catch (Exception ex) {
+                runOnUiThread(() -> {
+                    if (statusLabel.getParent() == null) return;
+                    toggle.setOnCheckedChangeListener(null);
+                    if (enabled) {
+                        statusLabel.setText("No se confirmó el cambio de ADB.");
+                        toggle.setChecked(false);
+                        toggle.setEnabled(true);
+                        toggle.setOnCheckedChangeListener((button, checked) -> setFireAdbEnabled(host, checked, toggle, statusLabel));
+                    } else {
+                        statusLabel.setText("No se pudo confirmar el nuevo estado. Vuelve a conectar el Fire TV.");
+                        toggle.setChecked(false);
+                        toggle.setEnabled(false);
+                    }
+                    Toast.makeText(this, clean(ex.getMessage()), Toast.LENGTH_LONG).show();
+                });
+            } finally {
+                if (connection != null) try { connection.close(); } catch (Exception ignored) {}
+            }
+        });
+    }
+
+    private void showSupportSettings() {
+        settingsDetailVisible = true;
+        LinearLayout page = newPage();
+        addSettingsHeader(page, "Soporte", "Obtén ayuda, reporta un problema o contáctanos.");
+        page.addView(submenuCard(13, "Centro de ayuda", "Guías y preguntas frecuentes", v -> openWeb("https://github.com/isaacguzmanr/NIIVO-Fire-TV-Installer#readme")));
+        page.addView(submenuCard(21, "Reportar un problema", "Envíanos un reporte", v -> openWeb("https://github.com/isaacguzmanr/NIIVO-Fire-TV-Installer/issues")));
+        page.addView(submenuCard(14, "Contáctanos", "Perfil de contacto", v -> openWeb("https://github.com/isaacguzmanr")));
+        page.addView(submenuCard(15, "Visitar sitio web", "niivo.app", v -> openWeb("https://niivo.app")));
+    }
+
+    private void openAppPermissions() {
+        try {
+            android.content.Intent intent = new android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    android.net.Uri.parse("package:" + getPackageName()));
+            startActivity(intent);
+        } catch (Exception ex) {
+            Toast.makeText(this, "No se pudo abrir la información de la app.", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void openEmailSupport() {
+        android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_SENDTO,
+                android.net.Uri.parse("mailto:"));
+        intent.putExtra(android.content.Intent.EXTRA_SUBJECT, "Ayuda con NIIVO Installer");
+        try { startActivity(android.content.Intent.createChooser(intent, "Enviar correo a soporte")); }
+        catch (Exception ex) { showInfoDialog("Contáctanos", "No hay una app de correo configurada. Puedes reportar el problema en GitHub: github.com/isaacguzmanr/NIIVO-Fire-TV-Installer/issues"); }
+    }
+
+    private void openWeb(String url) {
+        try { startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))); }
+        catch (Exception ex) { Toast.makeText(this, "No se pudo abrir el enlace.", Toast.LENGTH_LONG).show(); }
+    }
+
+    private void showThirdPartyLicenses() {
+        try (InputStream input = getAssets().open("THIRD_PARTY_NOTICES.txt")) {
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            byte[] buffer = new byte[2048];
+            int count;
+            while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
+            showInfoDialog("Licencias", output.toString("UTF-8"));
+        } catch (Exception ex) {
+            showInfoDialog("Licencias", "La biblioteca ADB incluida utiliza la licencia BSD 3-Clause.");
+        }
+    }
+
+    private void showPrivacyNotice() {
+        showInfoDialog("Política de privacidad", "NIIVO Installer guarda en el dispositivo la dirección IP del Fire TV y las claves ADB necesarias para la conexión. La búsqueda y transferencia del launcher ocurren por la red local. La app no incluye analítica ni publicidad. Para comprobar versiones y descargar APK, se conecta a GitHub.");
+    }
+
+    private void showTermsNotice() {
+        showInfoDialog("Términos de uso", "NIIVO Installer permite instalar NIIVO en dispositivos Fire TV compatibles. Las marcas y aplicaciones de terceros pertenecen a sus respectivos titulares. NIIVO es un proyecto independiente.");
+    }
+
+    private void showInfoDialog(String title, String message) {
+        new android.app.AlertDialog.Builder(this).setTitle(title).setMessage(message)
+                .setPositiveButton("Aceptar", null).show();
+    }
+
+    private void confirmClearInstallerData(boolean removeAdbKey) {
+        String action = removeAdbKey ? "Se borrarán la IP guardada, las preferencias y la clave ADB local." : "Se restablecerán las preferencias de NIIVO Installer.";
+        new android.app.AlertDialog.Builder(this).setTitle(removeAdbKey ? "Eliminar datos" : "Restablecer aplicación")
+                .setMessage(action + " Esta acción no se puede deshacer.")
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Continuar", (dialog, which) -> {
+                    getPreferences(MODE_PRIVATE).edit().clear().apply();
+                    if (removeAdbKey) {
+                        new File(getFilesDir(), "nivo-adbkey").delete();
+                        new File(getFilesDir(), "nivo-adbkey.pub").delete();
+                        clearDirectory(getCacheDir());
+                    }
+                    keepDataOnUninstall = true;
+                    Toast.makeText(this, "Los datos locales se restablecieron.", Toast.LENGTH_LONG).show();
+                    showSettings();
+                }).show();
+    }
+
+    private void clearDirectory(File directory) {
+        File[] children = directory.listFiles();
+        if (children == null) return;
+        for (File child : children) {
+            if (child.isDirectory()) clearDirectory(child);
+            child.delete();
+        }
+    }
     private void buildInstallerPage() {
+        if (uninstallMode) {
+            buildUninstallPage();
+            return;
+        }
+        buildConnectionPage();
+    }
+
+    private void buildConnectionPage() {
         updatesScreenVisible = false;
         settingsScreenVisible = false;
         settingsDetailVisible = false;
+        installerScreenVisible = true;
         LinearLayout page = newPage();
-        addBack(page, "NIIVO");
-        LinearLayout brand = new LinearLayout(this);
-        brand.setGravity(Gravity.CENTER_VERTICAL);
-        View mark = new NivoMarkView(this);
-        brand.addView(mark, new LinearLayout.LayoutParams(dp(37), dp(37)));
-        TextView wordmark = text("NIIVO", 15, WHITE, true);
-        wordmark.setLetterSpacing(0.12f);
-        LinearLayout.LayoutParams wordmarkLp = new LinearLayout.LayoutParams(-2, -2);
-        wordmarkLp.leftMargin = dp(9);
-        brand.addView(wordmark, wordmarkLp);
-        page.addView(brand);
-        TextView title = text(uninstallMode ? "Desinstalar NIIVO" : "Launcher listo\npara instalar", 27, WHITE, true);
-        LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(-1, -2);
-        titleLp.topMargin = dp(23);
-        page.addView(title, titleLp);
-        TextView intro = text(uninstallMode ? "Conecta con tu Fire TV para quitar NIIVO." : "Un Android TV más limpio y rápido.", 15, MUTED, false);
-        LinearLayout.LayoutParams introLp = new LinearLayout.LayoutParams(-1, -2);
-        introLp.topMargin = dp(7);
-        introLp.bottomMargin = dp(16);
-        page.addView(intro, introLp);
-        LinearLayout help = new LinearLayout(this);
-        help.setOrientation(LinearLayout.VERTICAL);
-        help.setPadding(dp(16), dp(14), dp(16), dp(14));
-        help.setBackground(glassPanel(dp(17)));
-        help.addView(text("ANTES DE EMPEZAR", 11, CYAN, true));
-        TextView steps = text("1. Activa Depuración ADB en Fire TV.\n2. Conecta teléfono y TV a la misma Wi‑Fi.\n3. Acepta el aviso de depuración en la TV.", 13, WHITE, false);
-        steps.setLineSpacing(dp(3), 1f);
-        LinearLayout.LayoutParams stepsLp = new LinearLayout.LayoutParams(-1, -2);
-        stepsLp.topMargin = dp(7);
-        help.addView(steps, stepsLp);
-        page.addView(help);
+        page.setBackground(homeGradient());
+        addSettingsHeader(page, "Antes de instalar",
+                "Realiza estos pasos en tu Fire TV\npara una instalación correcta.", () -> {
+                    uninstallMode = false;
+                    showHome();
+                });
+        page.addView(connectionStepCard("1", 3, "Antes de depuración ADB",
+                "Ve a Ajustes > Mi Fire TV > Opciones para desarrolladores y activa Depuración ADB."));
+        page.addView(connectionStepCard("2", 23, "Conecta a la misma Wi‑Fi",
+                "Tu teléfono y Fire TV deben estar en la misma red."));
+        page.addView(connectionStepCard("3", 24, "Acepta el aviso de depuración",
+                "En tu Fire TV, acepta la solicitud de depuración cuando aparezca."));
+        addConnectionControls(page, false);
+    }
+
+    private void buildUninstallPage() {
+        updatesScreenVisible = false;
+        settingsScreenVisible = false;
+        settingsDetailVisible = false;
+        installerScreenVisible = true;
+        keepDataOnUninstall = getPreferences(MODE_PRIVATE).getBoolean("keep_data", true);
+        LinearLayout page = newPage();
+        page.setBackground(homeGradient());
+        addSettingsHeader(page, "Antes de desinstalar",
+                "Revisa la siguiente información antes\nde continuar.", () -> {
+                    uninstallMode = false;
+                    showHome();
+                });
+        page.addView(connectionInfoCard(2, "Se eliminará NIIVO",
+                "El launcher actual se desinstalará de tu Fire TV."));
+        page.addView(connectionInfoCard(4, "Se restaurará el launcher original",
+                "Tu Fire TV volverá al launcher de Amazon al finalizar."));
+        page.addView(connectionInfoCard(3, "Tus datos se mantendrán",
+                keepDataOnUninstall
+                        ? "Esta acción no afecta tus aplicaciones o configuraciones del Fire TV."
+                        : "La configuración local de NIIVO se eliminará al desinstalar."));
+        page.addView(connectionInfoCard(7, "Se requiere conexión ADB",
+                "Tu teléfono y Fire TV deben estar en la misma red y tener ADB habilitado."));
+        addConnectionControls(page, true);
+    }
+
+    private View connectionStepCard(String number, int icon, String title, String subtitle) {
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(11), dp(9), dp(12), dp(9));
+        row.setBackground(glassPanel(dp(17)));
+        LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(-1, dp(82));
+        rowLp.bottomMargin = dp(9);
+        row.setLayoutParams(rowLp);
+
+        TextView badge = text(number, 14, WHITE, true);
+        badge.setGravity(Gravity.CENTER);
+        badge.setBackground(round(0xFF075079, dp(22), 0x6646BFFF, dp(1)));
+        row.addView(badge, new LinearLayout.LayoutParams(dp(29), dp(29)));
+        ActionIconView stepIcon = new ActionIconView(this, icon);
+        LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(dp(38), dp(38));
+        iconLp.leftMargin = dp(9);
+        iconLp.rightMargin = dp(10);
+        row.addView(stepIcon, iconLp);
+        LinearLayout labels = new LinearLayout(this);
+        labels.setOrientation(LinearLayout.VERTICAL);
+        row.addView(labels, new LinearLayout.LayoutParams(0, -2, 1f));
+        labels.addView(text(title, 14, WHITE, true));
+        TextView detail = text(subtitle, 11, MUTED, false);
+        detail.setLineSpacing(dp(1), 1f);
+        LinearLayout.LayoutParams detailLp = new LinearLayout.LayoutParams(-1, -2);
+        detailLp.topMargin = dp(3);
+        labels.addView(detail, detailLp);
+        return row;
+    }
+
+    private View connectionInfoCard(int icon, String title, String subtitle) {
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(10), dp(7), dp(10), dp(7));
+        row.setBackground(glassPanel(dp(16)));
+        LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(-1, dp(68));
+        rowLp.bottomMargin = dp(8);
+        row.setLayoutParams(rowLp);
+        ActionIconView iconView = new ActionIconView(this, icon);
+        row.addView(iconView, new LinearLayout.LayoutParams(dp(40), dp(40)));
+        View divider = new View(this);
+        divider.setBackgroundColor(0x663879B7);
+        LinearLayout.LayoutParams dividerLp = new LinearLayout.LayoutParams(dp(1), dp(44));
+        dividerLp.setMargins(dp(10), 0, dp(12), 0);
+        row.addView(divider, dividerLp);
+        LinearLayout labels = new LinearLayout(this);
+        labels.setOrientation(LinearLayout.VERTICAL);
+        row.addView(labels, new LinearLayout.LayoutParams(0, -2, 1f));
+        labels.addView(text(title, 14, WHITE, true));
+        TextView sub = text(subtitle, 11, MUTED, false);
+        sub.setLineSpacing(dp(1), 1f);
+        LinearLayout.LayoutParams subLp = new LinearLayout.LayoutParams(-1, -2);
+        subLp.topMargin = dp(2);
+        labels.addView(sub, subLp);
+        return row;
+    }
+
+    private void addConnectionControls(LinearLayout page, boolean removing) {
         searchButton = button("Buscar Fire TV en mi Wi‑Fi", true);
         LinearLayout.LayoutParams searchLp = new LinearLayout.LayoutParams(-1, dp(52));
-        searchLp.topMargin = dp(15);
+        searchLp.topMargin = dp(7);
+        searchLp.bottomMargin = dp(7);
         page.addView(searchButton, searchLp);
         searchButton.setOnClickListener(v -> scanNetwork());
-        devices = text("Todavía no se ha buscado ningún dispositivo.", 13, MUTED, false);
-        devices.setPadding(dp(3), dp(9), dp(3), dp(3));
-        page.addView(devices);
-        TextView manual = text("También puedes escribir la IP de Fire TV > Mi Fire TV > Acerca de > Red.", 12, MUTED, false);
-        LinearLayout.LayoutParams manualLp = new LinearLayout.LayoutParams(-1, -2);
-        manualLp.topMargin = dp(8);
-        page.addView(manual, manualLp);
+
+        LinearLayout note = new LinearLayout(this);
+        note.setGravity(Gravity.TOP | Gravity.START);
+        note.setPadding(dp(3), dp(4), dp(2), dp(4));
+        ActionIconView infoIcon = new ActionIconView(this, 7);
+        note.addView(infoIcon, new LinearLayout.LayoutParams(dp(20), dp(20)));
+        TextView hint = text("Si no aparece tu Fire TV, puedes escribir la IP manualmente.", 12, MUTED, false);
+        hint.setLineSpacing(dp(2), 1f);
+        LinearLayout.LayoutParams hintLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        hintLp.leftMargin = dp(10);
+        note.addView(hint, hintLp);
+        page.addView(note);
+
+        LinearLayout ipBox = new LinearLayout(this);
+        ipBox.setGravity(Gravity.CENTER_VERTICAL);
+        ipBox.setPadding(dp(12), 0, dp(12), 0);
+        ipBox.setBackground(glassPanel(dp(15)));
+        ActionIconView wifi = new ActionIconView(this, 23);
+        ipBox.addView(wifi, new LinearLayout.LayoutParams(dp(30), dp(30)));
+        View divider = new View(this);
+        divider.setBackgroundColor(0x663879B7);
+        LinearLayout.LayoutParams dividerLp = new LinearLayout.LayoutParams(dp(1), dp(32));
+        dividerLp.setMargins(dp(8), 0, dp(12), 0);
+        ipBox.addView(divider, dividerLp);
         ipInput = new EditText(this);
         ipInput.setSingleLine(true);
-        ipInput.setHint("IP del Fire TV, por ejemplo 192.168.1.7");
-        ipInput.setHintTextColor(Color.rgb(139, 155, 175));
+        ipInput.setHint("IP del Fire TV (ej. 192.168.1.7)");
+        ipInput.setHintTextColor(0xFF91A6C2);
         ipInput.setTextColor(WHITE);
         ipInput.setTextSize(14);
-        ipInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_URI);
-        ipInput.setPadding(dp(14), 0, dp(14), 0);
-        ipInput.setBackground(glassPanel(dp(15)));
+        ipInput.setInputType(android.text.InputType.TYPE_CLASS_PHONE);
+        ipInput.setPadding(0, 0, 0, 0);
+        ipInput.setBackgroundColor(Color.TRANSPARENT);
+        ipBox.addView(ipInput, new LinearLayout.LayoutParams(0, -1, 1f));
         LinearLayout.LayoutParams ipLp = new LinearLayout.LayoutParams(-1, dp(50));
-        ipLp.topMargin = dp(8);
-        page.addView(ipInput, ipLp);
-        installButton = button(uninstallMode ? "Desinstalar NIIVO" : "Instalar NIIVO", true);
+        ipLp.topMargin = dp(4);
+        page.addView(ipBox, ipLp);
+
+        installButton = button(removing ? "Desinstalar NIIVO" : "Continuar", true);
         installButton.setEnabled(false);
         installButton.setAlpha(0.5f);
-        LinearLayout.LayoutParams installLp = new LinearLayout.LayoutParams(-1, dp(54));
-        installLp.topMargin = dp(13);
-        page.addView(installButton, installLp);
+        LinearLayout.LayoutParams actionLp = new LinearLayout.LayoutParams(-1, dp(54));
+        actionLp.topMargin = dp(12);
+        page.addView(installButton, actionLp);
         ipInput.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -992,62 +1523,239 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
             @Override public void afterTextChanged(Editable e) {}
         });
         installButton.setOnClickListener(v -> installSelected());
-        status = text("El APK de NIIVO está incluido; no tienes que descargarlo aparte.", 12, MUTED, false);
+
+        devices = text("", 12, MUTED, false);
+        devices.setVisibility(View.GONE);
+        LinearLayout.LayoutParams devicesLp = new LinearLayout.LayoutParams(-1, -2);
+        devicesLp.topMargin = dp(7);
+        page.addView(devices, devicesLp);
+        status = text("", 12, MUTED, false);
         status.setGravity(Gravity.CENTER);
-        status.setPadding(dp(4), dp(11), dp(4), 0);
-        page.addView(status);
+        status.setVisibility(View.GONE);
+        LinearLayout.LayoutParams statusLp = new LinearLayout.LayoutParams(-1, -2);
+        statusLp.topMargin = dp(6);
+        page.addView(status, statusLp);
     }
 
     private void showProgressScreen(boolean removing) {
         LinearLayout page = newPage();
+        page.setBackground(homeGradient());
         page.setGravity(Gravity.CENTER_HORIZONTAL);
-        page.setPadding(dp(22), 0, dp(22), 0);
+        page.setPadding(dp(18), dp(2), dp(18), dp(22));
 
         android.widget.FrameLayout topBar = new android.widget.FrameLayout(this);
-        TextView back = text("‹", 32, WHITE, false);
+        TextView back = text("‹", 31, WHITE, false);
         back.setGravity(Gravity.CENTER);
-        android.widget.FrameLayout.LayoutParams backLp = new android.widget.FrameLayout.LayoutParams(dp(48), dp(48), Gravity.START | Gravity.CENTER_VERTICAL);
+        android.widget.FrameLayout.LayoutParams backLp = new android.widget.FrameLayout.LayoutParams(dp(44), dp(46), Gravity.START | Gravity.CENTER_VERTICAL);
         topBar.addView(back, backLp);
         back.setContentDescription("Cancelar operación");
         back.setOnClickListener(v -> confirmCancelOperation(removing));
         page.addView(topBar, new LinearLayout.LayoutParams(-1, dp(48)));
 
-        View topSpace = new View(this);
-        page.addView(topSpace, new LinearLayout.LayoutParams(-1, 0, 0.95f));
-
-        View logo = new NivoMarkView(this);
-        page.addView(logo, new LinearLayout.LayoutParams(dp(88), dp(88)));
-        TextView title = text(removing ? "Desinstalando NIIVO" : "Instalando NIIVO", 23, WHITE, true);
-        title.setGravity(Gravity.CENTER);
+        TextView title = text(removing ? "Desinstalación" : "Instalación", 29, WHITE, true);
         LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(-1, -2);
-        titleLp.topMargin = dp(19);
+        titleLp.topMargin = dp(13);
         page.addView(title, titleLp);
+        TextView intro = text(removing ? "Desinstala NIIVO de tu Fire TV." : "Instala la última versión de NIIVO\nen tu dispositivo.", 15, MUTED, false);
+        intro.setLineSpacing(dp(3), 1f);
+        LinearLayout.LayoutParams introLp = new LinearLayout.LayoutParams(-1, -2);
+        introLp.topMargin = dp(7);
+        introLp.bottomMargin = dp(17);
+        page.addView(intro, introLp);
 
-        status = text("Esto puede tomar unos segundos.", 14, MUTED, false);
-        status.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams statusLp = new LinearLayout.LayoutParams(-1, -2);
-        statusLp.topMargin = dp(8);
-        page.addView(status, statusLp);
+        LinearLayout appCard = new LinearLayout(this);
+        appCard.setGravity(Gravity.CENTER_VERTICAL);
+        appCard.setPadding(dp(16), dp(14), dp(16), dp(14));
+        appCard.setBackground(installerCardPanel(dp(20)));
+        android.widget.ImageView appIcon = new android.widget.ImageView(this);
+        appIcon.setImageResource(R.drawable.nivo_update_mark);
+        appIcon.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+        appIcon.setBackground(round(0xFF061020, dp(18), 0x334A72BA, dp(1)));
+        appIcon.setPadding(dp(9), dp(9), dp(9), dp(9));
+        appCard.addView(appIcon, new LinearLayout.LayoutParams(dp(68), dp(68)));
+        LinearLayout appCopy = new LinearLayout(this);
+        appCopy.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams appCopyLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        appCopyLp.leftMargin = dp(14);
+        appCard.addView(appCopy, appCopyLp);
+        appCopy.addView(text("NIIVO Launcher", 18, WHITE, true));
+        TextView appVersion = text(getEmbeddedLauncherVersion().replace("Versión ", ""), 14, MUTED, false);
+        LinearLayout.LayoutParams appVersionLp = new LinearLayout.LayoutParams(-1, -2);
+        appVersionLp.topMargin = dp(3);
+        appCopy.addView(appVersion, appVersionLp);
+        TextView appKind = text("Launcher para Fire TV", 13, MUTED, false);
+        LinearLayout.LayoutParams appKindLp = new LinearLayout.LayoutParams(-1, -2);
+        appKindLp.topMargin = dp(3);
+        appCopy.addView(appKind, appKindLp);
+        LinearLayout.LayoutParams appCardLp = new LinearLayout.LayoutParams(-1, -2);
+        appCardLp.bottomMargin = dp(10);
+        page.addView(appCard, appCardLp);
 
-        progressTrack = new android.widget.FrameLayout(this);
-        progressTrack.setBackground(round(0x55435783, dp(5), 0x00435783, 0));
-        indeterminateProgress = new IndeterminateProgressView(this);
-        progressTrack.addView(indeterminateProgress, new android.widget.FrameLayout.LayoutParams(-1, -1));
-        LinearLayout.LayoutParams trackLp = new LinearLayout.LayoutParams(-1, dp(6));
-        trackLp.leftMargin = dp(3);
-        trackLp.rightMargin = dp(3);
-        trackLp.topMargin = dp(46);
-        page.addView(progressTrack, trackLp);
+        LinearLayout progressCard = new LinearLayout(this);
+        progressCard.setOrientation(LinearLayout.VERTICAL);
+        progressCard.setPadding(dp(15), dp(13), dp(15), dp(13));
+        progressCard.setBackground(glassPanel(dp(19)));
+        LinearLayout progressHeading = new LinearLayout(this);
+        progressHeading.setGravity(Gravity.CENTER_VERTICAL);
+        operationProgressTitle = text(removing ? "Desinstalando…" : "Instalando…", 17, WHITE, true);
+        progressHeading.addView(operationProgressTitle, new LinearLayout.LayoutParams(0, -2, 1f));
+        operationProgressPercent = text("0%", 17, CYAN, true);
+        operationProgressPercent.setGravity(Gravity.CENTER_VERTICAL | Gravity.END);
+        progressHeading.addView(operationProgressPercent);
+        progressCard.addView(progressHeading);
+        operationProgressSubtitle = text("Esto puede tardar unos segundos.", 13, MUTED, false);
+        LinearLayout.LayoutParams progressSubLp = new LinearLayout.LayoutParams(-1, -2);
+        progressSubLp.topMargin = dp(3);
+        progressCard.addView(operationProgressSubtitle, progressSubLp);
+        operationProgressBar = new android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        operationProgressBar.setMax(100);
+        operationProgressBar.setProgress(0);
+        operationProgressBar.setProgressDrawable(operationProgressDrawable());
+        LinearLayout.LayoutParams progressBarLp = new LinearLayout.LayoutParams(-1, dp(8));
+        progressBarLp.topMargin = dp(13);
+        progressCard.addView(operationProgressBar, progressBarLp);
+        LinearLayout.LayoutParams progressCardLp = new LinearLayout.LayoutParams(-1, -2);
+        progressCardLp.bottomMargin = dp(10);
+        page.addView(progressCard, progressCardLp);
 
-        View bottomSpace = new View(this);
-        page.addView(bottomSpace, new LinearLayout.LayoutParams(-1, 0, 1.1f));
+        LinearLayout stepsCard = new LinearLayout(this);
+        stepsCard.setOrientation(LinearLayout.VERTICAL);
+        stepsCard.setPadding(dp(14), dp(7), dp(14), dp(7));
+        stepsCard.setBackground(glassPanel(dp(19)));
+        String[] stepTitles = removing
+                ? new String[]{"Conectando con Fire TV", "Desinstalando NIIVO", "Restaurando inicio", "Finalizando"}
+                : new String[]{"Copiando paquete", "Verificando archivo", "Instalando aplicación", "Finalizando"};
+        String[] stepSubtitles = removing
+                ? new String[]{"Esperando autorización ADB", "Quitando NIIVO del dispositivo", "Launcher predeterminado de Fire TV", "Proceso completado"}
+                : new String[]{getEmbeddedLauncherVersion(), "Comprobando integridad del paquete", "En tu dispositivo", "Configurando launcher"};
+        int[] stepIcons = removing ? new int[]{1, 2, 4, 10} : new int[]{9, 7, 3, 10};
+        for (int i = 0; i < stepTitles.length; i++) {
+            LinearLayout row = operationStepRow(i, stepIcons[i], stepTitles[i], stepSubtitles[i]);
+            stepsCard.addView(row, new LinearLayout.LayoutParams(-1, dp(58)));
+            if (i < stepTitles.length - 1) {
+                View divider = new View(this);
+                divider.setBackgroundColor(0x332F5684);
+                LinearLayout.LayoutParams dividerLp = new LinearLayout.LayoutParams(-1, dp(1));
+                dividerLp.leftMargin = dp(55);
+                dividerLp.rightMargin = dp(3);
+                stepsCard.addView(divider, dividerLp);
+            }
+        }
+        LinearLayout.LayoutParams stepsCardLp = new LinearLayout.LayoutParams(-1, -2);
+        stepsCardLp.bottomMargin = dp(12);
+        page.addView(stepsCard, stepsCardLp);
+
+        TextView installing = text(removing ? "Desinstalando…" : "Instalando…", 15, 0xB8FFFFFF, true);
+        installing.setGravity(Gravity.CENTER);
+        installing.setBackground(gradientButton(dp(22)));
+        installing.setEnabled(false);
+        page.addView(installing, new LinearLayout.LayoutParams(-1, dp(58)));
+        updateOperationProgress(0, 0, removing ? "Conectando con Fire TV…" : "Conectando con Fire TV…", "Acepta la solicitud de depuración ADB en la televisión.");
     }
 
     private void setProgressActivity(boolean moving) {
         runOnUiThread(() -> {
-            if (indeterminateProgress != null) indeterminateProgress.setMoving(moving);
+            if (operationActiveSpinner != null) operationActiveSpinner.setVisibility(moving ? View.VISIBLE : View.INVISIBLE);
         });
     }
+
+    private Drawable operationProgressDrawable() {
+        GradientDrawable track = new GradientDrawable();
+        track.setColor(0xAA172543);
+        track.setCornerRadius(dp(8));
+        GradientDrawable fill = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
+                new int[]{CYAN, BLUE, PURPLE});
+        fill.setCornerRadius(dp(8));
+        android.graphics.drawable.ClipDrawable clipped = new android.graphics.drawable.ClipDrawable(
+                fill, Gravity.START, android.graphics.drawable.ClipDrawable.HORIZONTAL);
+        android.graphics.drawable.LayerDrawable layers = new android.graphics.drawable.LayerDrawable(
+                new Drawable[]{track, clipped});
+        layers.setId(0, android.R.id.background);
+        layers.setId(1, android.R.id.progress);
+        return layers;
+    }
+
+    private LinearLayout operationStepRow(int index, int iconKind, String title, String subtitle) {
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        FrameLayout iconHolder = new FrameLayout(this);
+        iconHolder.setBackground(round(0xD1271CE8, dp(28), 0x443F6BFF, dp(1)));
+        ActionIconView icon = new ActionIconView(this, iconKind);
+        iconHolder.addView(icon, new FrameLayout.LayoutParams(-1, -1));
+        LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(dp(44), dp(44));
+        iconLp.rightMargin = dp(12);
+        row.addView(iconHolder, iconLp);
+        operationStepIcons[index] = iconHolder;
+
+        LinearLayout copy = new LinearLayout(this);
+        copy.setOrientation(LinearLayout.VERTICAL);
+        row.addView(copy, new LinearLayout.LayoutParams(0, -2, 1f));
+        operationStepTitles[index] = text(title, 14, WHITE, false);
+        copy.addView(operationStepTitles[index]);
+        operationStepSubtitles[index] = text(subtitle, 12, MUTED, false);
+        LinearLayout.LayoutParams subLp = new LinearLayout.LayoutParams(-1, -2);
+        subLp.topMargin = dp(2);
+        copy.addView(operationStepSubtitles[index], subLp);
+
+        FrameLayout badge = new FrameLayout(this);
+        LinearLayout.LayoutParams badgeLp = new LinearLayout.LayoutParams(dp(24), dp(24));
+        badgeLp.leftMargin = dp(8);
+        row.addView(badge, badgeLp);
+        TextView check = text("✓", 16, 0xFF20E6B0, true);
+        check.setGravity(Gravity.CENTER);
+        check.setBackground(round(0x4420DDAA, dp(16), 0, 0));
+        badge.addView(check, new FrameLayout.LayoutParams(-1, -1));
+        check.setVisibility(View.GONE);
+        android.widget.ProgressBar spinner = new android.widget.ProgressBar(this);
+        if (android.os.Build.VERSION.SDK_INT >= 21) spinner.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(CYAN));
+        badge.addView(spinner, new FrameLayout.LayoutParams(-1, -1));
+        spinner.setVisibility(View.GONE);
+        TextView pending = text("", 12, 0xFF465575, false);
+        pending.setBackground(round(0x00304060, dp(16), 0x99435578, dp(2)));
+        badge.addView(pending, new FrameLayout.LayoutParams(-1, -1));
+        operationStepStatuses[index] = badge;
+        return row;
+    }
+
+    private void updateOperationProgress(int percent, int activeStep, String title, String subtitle) {
+        runOnUiThread(() -> {
+            if (operationProgressBar == null) return;
+            int safe = Math.max(0, Math.min(100, percent));
+            operationProgressBar.setProgress(safe);
+            operationProgressPercent.setText(safe + "%");
+            operationProgressTitle.setText(title);
+            operationProgressSubtitle.setText(subtitle);
+            operationActiveSpinner = null;
+            for (int i = 0; i < operationStepStatuses.length; i++) {
+                FrameLayout badge = (FrameLayout) operationStepStatuses[i];
+                TextView check = (TextView) badge.getChildAt(0);
+                android.widget.ProgressBar spinner = (android.widget.ProgressBar) badge.getChildAt(1);
+                TextView pending = (TextView) badge.getChildAt(2);
+                if (i < activeStep) {
+                    check.setVisibility(View.VISIBLE);
+                    spinner.setVisibility(View.GONE);
+                    pending.setVisibility(View.GONE);
+                    operationStepTitles[i].setTextColor(WHITE);
+                    operationStepIcons[i].setAlpha(1f);
+                } else if (i == activeStep) {
+                    check.setVisibility(View.GONE);
+                    spinner.setVisibility(View.VISIBLE);
+                    pending.setVisibility(View.GONE);
+                    operationActiveSpinner = spinner;
+                    operationStepTitles[i].setTextColor(WHITE);
+                    operationStepIcons[i].setAlpha(1f);
+                } else {
+                    check.setVisibility(View.GONE);
+                    spinner.setVisibility(View.GONE);
+                    pending.setVisibility(View.VISIBLE);
+                    operationStepTitles[i].setTextColor(0xFF8290AB);
+                    operationStepSubtitles[i].setTextColor(0xFF75829A);
+                    operationStepIcons[i].setAlpha(0.48f);
+                }
+            }
+        });
+    }
+
     private void confirmCancelOperation(boolean removing) {
         if (!operationRunning) {
             buildInstallerPage();
@@ -1180,8 +1888,10 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
     private void scanNetwork() {
         searchButton.setEnabled(false);
         installButton.setEnabled(false);
+        devices.setVisibility(View.VISIBLE);
+        status.setVisibility(View.VISIBLE);
         status.setText("Buscando dispositivos ADB en esta red…");
-        devices.setText("");
+        devices.setText("Buscando Fire TV en la red Wi‑Fi…");
         found.clear();
         WORK.execute(() -> {
             List<String> candidates = new ArrayList<>();
@@ -1293,6 +2003,7 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
                 connection = connect(host);
                 AdbConnection active = connection;
                 if (cancelRequested) throw new IOException("Operación cancelada.");
+                updateOperationProgress(4, 0, "Conectando con Fire TV…", "Fire TV conectado; comprobando el dispositivo.");
 
                 String deviceInfo = runShell(active, "getprop ro.product.manufacturer; getprop ro.product.model");
                 String deviceLower = deviceInfo.toLowerCase(java.util.Locale.ROOT);
@@ -1300,23 +2011,40 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
                     throw new IOException("El dispositivo " + host + " no se identificó como Fire TV. No instalé nada. " + clean(deviceInfo));
                 }
                 if (uninstallMode) {
-
+                    updateOperationProgress(35, 1, "Desinstalando aplicación…", "Quitando NIIVO del Fire TV.");
                     String command = keepDataOnUninstall ? "pm uninstall -k " : "pm uninstall ";
                     String result = runShell(active, command + FIRE_PACKAGE);
                     if (cancelRequested) throw new IOException("Operación cancelada.");
                     if (!result.contains("Success")) throw new IOException("No se pudo desinstalar NIIVO. " + clean(result));
+                    updateOperationProgress(88, 3, "Finalizando…", "Fire TV volverá a su launcher predeterminado.");
                 } else {
-
-                    pushApk(active);
+                    File apk = prepareBundledApk();
                     if (cancelRequested) throw new IOException("Operación cancelada.");
+                    updateOperationProgress(8, 0, "Enviando paquete…", "Copiando 0.0 MB de " + formatMegabytes(apk.length()) + " al Fire TV.");
+                    pushApk(active, apk, "/data/local/tmp/nivo.apk", (sent, total) -> {
+                        int transfer = total <= 0 ? 0 : (int) Math.min(1_000L, sent * 1_000L / total);
+                        int progress = 8 + transfer * 57 / 1_000;
+                        updateOperationProgress(progress, 0, "Enviando paquete…",
+                                "Copiando " + formatMegabytes(sent) + " de " + formatMegabytes(total) + " al Fire TV.");
+                    });
+                    if (cancelRequested) throw new IOException("Operación cancelada.");
+                    updateOperationProgress(65, 1, "Verificando archivo…", "Comprobando el paquete transferido al Fire TV.");
+                    String remoteSizeText = runShell(active, "wc -c < /data/local/tmp/nivo.apk").trim();
+                    java.util.regex.Matcher remoteSizeMatch = java.util.regex.Pattern.compile("(\\d+)").matcher(remoteSizeText);
+                    if (!remoteSizeMatch.find() || Long.parseLong(remoteSizeMatch.group(1)) != apk.length()) {
+                        throw new IOException("La comprobación del paquete copiado al Fire TV no coincide con el tamaño original.");
+                    }
+                    updateOperationProgress(68, 2, "Instalando aplicación…", "Fire TV está aplicando el paquete.");
 
                     String install = runShell(active, "pm install -r -g /data/local/tmp/nivo.apk");
                     if (cancelRequested) throw new IOException("Operación cancelada.");
                     if (!install.contains("Success")) throw new IOException("La TV no aceptó la instalación. " + clean(install));
 
+                    updateOperationProgress(88, 3, "Finalizando…", "Configurando NIIVO como launcher.");
                     enableLauncher(active);
                     if (cancelRequested) throw new IOException("Operación cancelada.");
                 }
+                updateOperationProgress(100, 4, uninstallMode ? "Desinstalación completada" : "Instalación completada", "Proceso terminado correctamente.");
                 runOnUiThread(() -> {
                     operationRunning = false;
                     showSuccess(uninstallMode, host);
@@ -1372,16 +2100,52 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
     }
 
     private void pushApk(AdbConnection conn) throws Exception {
-        File apk = new File(getCacheDir(), "nivo.apk");
-        try (InputStream in = getAssets().open("nivo.apk"); FileOutputStream out = new FileOutputStream(apk)) {
-            byte[] buffer = new byte[32768];
-            int n;
-            while ((n = in.read(buffer)) != -1) out.write(buffer, 0, n);
-        }
+        File apk = prepareBundledApk();
         pushApk(conn, apk, "/data/local/tmp/nivo.apk");
     }
 
+    private File prepareBundledApk() throws Exception {
+        File apk = new File(getCacheDir(), "nivo.apk");
+        long totalBytes;
+        try (InputStream sizeStream = getAssets().open("nivo.apk")) { totalBytes = sizeStream.available(); }
+        try (InputStream in = getAssets().open("nivo.apk"); FileOutputStream out = new FileOutputStream(apk)) {
+            byte[] buffer = new byte[32768];
+            int n;
+            long copied = 0;
+            while ((n = in.read(buffer)) != -1) {
+                if (cancelRequested) throw new IOException("Operación cancelada.");
+                out.write(buffer, 0, n);
+                copied += n;
+                int preparation = (int) Math.min(4, copied * 4 / Math.max(1, totalBytes));
+                updateOperationProgress(preparation, 0, "Preparando paquete…", "Leyendo el APK incluido en NIIVO Installer.");
+            }
+        }
+        if (!apk.isFile() || apk.length() == 0) throw new IOException("El paquete de NIIVO está vacío.");
+        boolean hasManifest = false;
+        boolean hasDex = false;
+        try (ZipFile zip = new ZipFile(apk)) {
+            hasManifest = zip.getEntry("AndroidManifest.xml") != null;
+            for (java.util.Enumeration<? extends java.util.zip.ZipEntry> entries = zip.entries(); entries.hasMoreElements();) {
+                String name = entries.nextElement().getName();
+                if (name.matches("classes[0-9]*\\.dex")) { hasDex = true; break; }
+            }
+        } catch (Exception invalid) {
+            throw new IOException("No se pudo verificar el APK incluido.", invalid);
+        }
+        if (!hasManifest || !hasDex) throw new IOException("El APK incluido no pasó la verificación de integridad.");
+        android.content.pm.PackageInfo info = getPackageManager().getPackageArchiveInfo(apk.getAbsolutePath(), 0);
+        if (info == null || !FIRE_PACKAGE.equals(info.packageName)) throw new IOException("El APK incluido no corresponde al launcher NIIVO.");
+        updateOperationProgress(8, 0, "Verificando archivo…", "APK válido, versión " + info.versionName + ".");
+        return apk;
+    }
+
     private void pushApk(AdbConnection conn, File apk, String remotePath) throws Exception {
+        pushApk(conn, apk, remotePath, null);
+    }
+
+    private interface TransferProgressListener { void onProgress(long transferred, long total); }
+
+    private void pushApk(AdbConnection conn, File apk, String remotePath, TransferProgressListener progress) throws Exception {
         AdbStream stream = conn.open("sync:");
         try {
             byte[] spec = (remotePath + ",420").getBytes(StandardCharsets.UTF_8);
@@ -1391,10 +2155,19 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
             try (InputStream in = new java.io.FileInputStream(apk)) {
                 byte[] fileChunk = new byte[3900];
                 int n;
+                long transferred = 0;
+                long total = apk.length();
+                long lastProgress = 0;
                 while ((n = in.read(fileChunk)) != -1) {
+                    if (cancelRequested) throw new IOException("Operación cancelada.");
                     ByteBuffer packet = ByteBuffer.allocate(8+n).order(ByteOrder.LITTLE_ENDIAN);
                     packet.put(new byte[]{'D','A','T','A'}).putInt(n).put(fileChunk,0,n);
                     writeChunked(stream, packet.array(), 4000);
+                    transferred += n;
+                    if (progress != null && (transferred - lastProgress >= 65536 || transferred == total)) {
+                        progress.onProgress(transferred, total);
+                        lastProgress = transferred;
+                    }
                 }
             }
             ByteBuffer done = ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN);
@@ -1467,6 +2240,7 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
         else if (updatesScreenVisible) showHome();
         else if (settingsDetailVisible) showSettings();
         else if (settingsScreenVisible) showHome();
+        else if (installerScreenVisible) { uninstallMode = false; showHome(); }
         else super.onBackPressed();
     }
     private final class IndeterminateProgressView extends View {
@@ -1548,15 +2322,31 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
             canvas.save();
             canvas.translate((getWidth() - 100 * scale) / 2f, (getHeight() - 100 * scale) / 2f);
             canvas.scale(scale, scale);
-            if (kind == 9) drawDownload(canvas);
+            if (kind == 11) drawUsb(canvas);
+            else if (kind == 12) drawClock(canvas);
+            else if (kind == 13 || kind == 16) drawHelp(canvas);
+            else if (kind == 14) drawMail(canvas);
+            else if (kind == 15) drawExternal(canvas);
+            else if (kind == 17) drawDocument(canvas);
+            else if (kind == 18) drawShield(canvas);
+            else if (kind == 19) drawPeople(canvas);
+            else if (kind == 20) drawRefresh(canvas);
+            else if (kind == 21) drawChat(canvas);
+            else if (kind == 22) drawHeadset(canvas);
+            else if (kind == 23) drawWifi(canvas);
+            else if (kind == 24) drawCheckSquare(canvas);
+            else if (kind == 25) drawLock(canvas);
+            else if (kind == 9) drawDownload(canvas);
             else if (kind == 0) drawCube(canvas);
-            else if (kind == 1) drawRefresh(canvas);
+            else if (kind == 1) drawMenuRefresh(canvas);
             else if (kind == 2) drawTrash(canvas);
             else if (kind == 3) drawGear(canvas);
             else if (kind == 4) drawHome(canvas);
             else if (kind == 5) drawDatabase(canvas);
             else if (kind == 6) drawTag(canvas);
             else if (kind == 7) drawInfo(canvas);
+            else if (kind == 8) drawCancel(canvas);
+            else if (kind == 10) drawRocket(canvas);
             else drawShield(canvas);
             canvas.restore();
         }
@@ -1587,7 +2377,72 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
         private void drawDownload(Canvas canvas) {
             canvas.drawLine(50, 18, 50, 60, icon);
             Path arrow = new Path(); arrow.moveTo(32, 45); arrow.lineTo(50, 63); arrow.lineTo(68, 45); canvas.drawPath(arrow, icon);
-            Path tray = new Path(); tray.moveTo(22, 64); tray.lineTo(22, 77); tray.quadTo(22, 82, 28, 82); tray.lineTo(72, 82); tray.quadTo(78, 82, 78, 77); tray.lineTo(78, 64); canvas.drawPath(tray, icon);
+            canvas.drawLine(22, 80, 78, 80, icon);
+        }
+        private void drawCancel(Canvas canvas) {
+            canvas.drawLine(28, 28, 72, 72, icon);
+            canvas.drawLine(72, 28, 28, 72, icon);
+        }
+        private void drawRocket(Canvas canvas) {
+            Path body = new Path();
+            body.moveTo(50, 16); body.cubicTo(68, 28, 72, 47, 65, 64);
+            body.lineTo(50, 76); body.lineTo(35, 64); body.cubicTo(28, 47, 32, 28, 50, 16);
+            canvas.drawPath(body, icon);
+            canvas.drawCircle(50, 43, 7, icon);
+            Path fins = new Path();
+            fins.moveTo(35, 55); fins.lineTo(23, 62); fins.lineTo(28, 76); fins.lineTo(42, 69);
+            fins.moveTo(65, 55); fins.lineTo(77, 62); fins.lineTo(72, 76); fins.lineTo(58, 69);
+            canvas.drawPath(fins, icon);
+            canvas.drawLine(45, 79, 50, 88, icon);
+            canvas.drawLine(55, 79, 50, 88, icon);
+        }
+        private void drawUsb(Canvas canvas) {
+            canvas.drawLine(50, 79, 50, 29, icon);
+            canvas.drawLine(50, 52, 29, 35, icon);
+            canvas.drawLine(50, 61, 72, 43, icon);
+            canvas.drawLine(50, 69, 50, 84, icon);
+            canvas.drawCircle(50, 85, 7, icon);
+            canvas.drawRect(24, 26, 34, 37, icon);
+            Path arrow = new Path(); arrow.moveTo(68, 37); arrow.lineTo(72, 25); arrow.lineTo(81, 33); arrow.close(); canvas.drawPath(arrow, icon);
+        }
+        private void drawClock(Canvas canvas) {
+            canvas.drawCircle(50, 50, 33, icon);
+            canvas.drawLine(50, 30, 50, 51, icon);
+            canvas.drawLine(50, 51, 66, 60, icon);
+        }
+        private void drawHelp(Canvas canvas) {
+            canvas.drawCircle(50, 50, 34, icon);
+            Path question = new Path();
+            question.moveTo(38, 39); question.cubicTo(39, 25, 62, 25, 63, 40);
+            question.cubicTo(63, 49, 50, 49, 50, 60); canvas.drawPath(question, icon);
+            canvas.drawCircle(50, 73, 2.5f, icon);
+        }
+        private void drawMail(Canvas canvas) {
+            android.graphics.RectF box = new android.graphics.RectF(19, 27, 81, 74);
+            canvas.drawRoundRect(box, 5, 5, icon);
+            canvas.drawLine(21, 31, 50, 54, icon); canvas.drawLine(79, 31, 50, 54, icon);
+        }
+        private void drawExternal(Canvas canvas) {
+            android.graphics.RectF box = new android.graphics.RectF(19, 39, 61, 81);
+            canvas.drawRoundRect(box, 5, 5, icon);
+            canvas.drawLine(44, 56, 80, 20, icon); canvas.drawLine(58, 20, 80, 20, icon); canvas.drawLine(80, 20, 80, 42, icon);
+        }
+        private void drawDocument(Canvas canvas) {
+            Path sheet = new Path();
+            sheet.moveTo(27, 17); sheet.lineTo(58, 17); sheet.lineTo(75, 34); sheet.lineTo(75, 83); sheet.lineTo(27, 83); sheet.close(); canvas.drawPath(sheet, icon);
+            canvas.drawLine(58, 18, 58, 34, icon); canvas.drawLine(58, 34, 74, 34, icon);
+            canvas.drawLine(37, 49, 64, 49, icon); canvas.drawLine(37, 61, 64, 61, icon); canvas.drawLine(37, 72, 58, 72, icon);
+        }
+        private void drawPeople(Canvas canvas) {
+            canvas.drawCircle(39, 36, 12, icon); canvas.drawCircle(65, 40, 10, icon);
+            canvas.drawArc(new android.graphics.RectF(17, 48, 61, 83), 180, 180, false, icon);
+            canvas.drawArc(new android.graphics.RectF(48, 53, 83, 83), 180, 180, false, icon);
+        }
+        private void drawChat(Canvas canvas) {
+            android.graphics.RectF bubble = new android.graphics.RectF(18, 20, 82, 69);
+            canvas.drawRoundRect(bubble, 7, 7, icon);
+            Path tail = new Path(); tail.moveTo(32, 69); tail.lineTo(26, 83); tail.lineTo(46, 69); canvas.drawPath(tail, icon);
+            canvas.drawLine(31, 37, 69, 37, icon); canvas.drawLine(31, 49, 61, 49, icon);
         }
         private void drawCube(Canvas canvas) {
             Path p = new Path();
@@ -1607,6 +2462,23 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
             lowerArrow.moveTo(21, 56); lowerArrow.lineTo(23, 66); lowerArrow.lineTo(32, 62);
             canvas.drawPath(lowerArrow, icon);
         }
+        private void drawMenuRefresh(Canvas canvas) {
+            android.graphics.RectF loop = new android.graphics.RectF(17, 17, 83, 83);
+            canvas.drawArc(loop, 195, 135, false, icon);
+            canvas.drawArc(loop, 15, 125, false, icon);
+
+            Path upperArrow = new Path();
+            upperArrow.moveTo(68, 31);
+            upperArrow.lineTo(82, 40);
+            upperArrow.lineTo(80, 24);
+            canvas.drawPath(upperArrow, icon);
+
+            Path lowerArrow = new Path();
+            lowerArrow.moveTo(32, 65);
+            lowerArrow.lineTo(18, 61);
+            lowerArrow.lineTo(22, 77);
+            canvas.drawPath(lowerArrow, icon);
+        }
         private void drawTrash(Canvas canvas) {
             Path body = new Path(); body.moveTo(30, 32); body.lineTo(34, 78); body.quadTo(35, 82, 40, 82);
             body.lineTo(60, 82); body.quadTo(65, 82, 66, 78); body.lineTo(70, 32); canvas.drawPath(body, icon);
@@ -1624,14 +2496,78 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
             }
             p.close(); canvas.drawPath(p, icon); canvas.drawCircle(50, 50, 12, icon);
         }
+        private void drawHeadset(Canvas canvas) {
+            canvas.drawArc(new android.graphics.RectF(22, 17, 78, 75), 185, 170, false, icon);
+            canvas.drawRoundRect(new android.graphics.RectF(17, 47, 31, 72), 5, 5, icon);
+            canvas.drawRoundRect(new android.graphics.RectF(69, 47, 83, 72), 5, 5, icon);
+            canvas.drawLine(76, 72, 69, 78, icon);
+            canvas.drawRoundRect(new android.graphics.RectF(58, 76, 70, 84), 4, 4, icon);
+        }
+        private void drawWifi(Canvas canvas) {
+            Path outer = new Path();
+            outer.moveTo(15, 39); outer.cubicTo(35, 18, 65, 18, 85, 39); canvas.drawPath(outer, icon);
+            Path middle = new Path();
+            middle.moveTo(27, 53); middle.cubicTo(41, 39, 59, 39, 73, 53); canvas.drawPath(middle, icon);
+            Path inner = new Path();
+            inner.moveTo(40, 66); inner.cubicTo(46, 60, 54, 60, 60, 66); canvas.drawPath(inner, icon);
+            canvas.drawCircle(50, 79, 3.5f, icon);
+        }
+        private void drawCheckSquare(Canvas canvas) {
+            canvas.drawRoundRect(new android.graphics.RectF(18, 18, 82, 82), 8, 8, icon);
+            Path check = new Path();
+            check.moveTo(31, 49); check.lineTo(45, 63); check.lineTo(70, 36); canvas.drawPath(check, icon);
+        }
+        private void drawLock(Canvas canvas) {
+            canvas.drawRoundRect(new android.graphics.RectF(23, 43, 77, 82), 6, 6, icon);
+            canvas.drawArc(new android.graphics.RectF(33, 17, 67, 57), 180, 180, false, icon);
+            canvas.drawLine(33, 37, 33, 45, icon);
+            canvas.drawLine(67, 37, 67, 45, icon);
+            canvas.drawCircle(50, 58, 4, icon);
+            canvas.drawLine(50, 62, 50, 71, icon);
+        }
     }
     private final class NivoMarkView extends android.widget.ImageView {
         NivoMarkView(android.content.Context context) {
             super(context);
-            setImageResource(R.drawable.nivo_mark);
+            setImageResource(R.drawable.nivo_update_mark);
             setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
             setContentDescription("NIIVO");
         }
+    }
+    private final class UpdateRingView extends View {
+        private final Paint ring = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private float rotation;
+        private ValueAnimator animator;
+        UpdateRingView(android.content.Context context) {
+            super(context);
+            ring.setStyle(Paint.Style.STROKE);
+            ring.setStrokeCap(Paint.Cap.ROUND);
+        }
+        @Override protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            float side = Math.min(getWidth(), getHeight());
+            float inset = dp(5);
+            android.graphics.RectF oval = new android.graphics.RectF((getWidth()-side)/2f+inset, (getHeight()-side)/2f+inset,
+                    (getWidth()+side)/2f-inset, (getHeight()+side)/2f-inset);
+            ring.setStrokeWidth(dp(4));
+            ring.setShader(new SweepGradient(getWidth()/2f, getHeight()/2f, new int[]{0x00335CFF, CYAN, BLUE, PURPLE, 0x00335CFF}, null));
+            canvas.save();
+            canvas.rotate(rotation, getWidth()/2f, getHeight()/2f);
+            canvas.drawArc(oval, 0f, 300f, false, ring);
+            canvas.restore();
+            ring.setShader(null);
+        }
+        private void start() {
+            if (animator != null || !isAttachedToWindow()) return;
+            animator = ValueAnimator.ofFloat(0f, 360f);
+            animator.setDuration(1250);
+            animator.setRepeatCount(ValueAnimator.INFINITE);
+            animator.setInterpolator(new android.view.animation.LinearInterpolator());
+            animator.addUpdateListener(a -> { rotation = (float)a.getAnimatedValue(); invalidate(); });
+            animator.start();
+        }
+        @Override protected void onAttachedToWindow() { super.onAttachedToWindow(); start(); }
+        @Override protected void onDetachedFromWindow() { if (animator != null) { animator.cancel(); animator = null; } super.onDetachedFromWindow(); }
     }
     private final class SuccessRingView extends View {
         private final Paint ring = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -1690,7 +2626,96 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
             @Override public void setColorFilter(ColorFilter colorFilter) {}
             @Override public int getOpacity() { return PixelFormat.OPAQUE; }
         };
-    }    private Drawable successOutline(int radius) {
+    }
+    private Drawable menuBackground() {
+        return new Drawable() {
+            private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            @Override public void draw(Canvas canvas) {
+                Rect bounds = getBounds();
+                float w = bounds.width(), h = bounds.height();
+                if (w <= 0 || h <= 0) return;
+                canvas.save();
+                canvas.translate(bounds.left, bounds.top);
+                Path clip = new Path();
+                clip.addRoundRect(new android.graphics.RectF(0, 0, w, h), dp(17), dp(17), Path.Direction.CW);
+                canvas.clipPath(clip);
+                paint.setStyle(Paint.Style.FILL);
+                paint.setShader(null);
+                paint.setColor(0xFF020812);
+                canvas.drawRect(0, 0, w, h, paint);
+                paint.setShader(new RadialGradient(w * 0.03f, h * 0.12f, Math.max(w, h) * 0.58f,
+                        new int[]{0x35113A70, 0x1A102B5B, 0x00102B5B},
+                        new float[]{0f, 0.56f, 1f}, Shader.TileMode.CLAMP));
+                canvas.drawRect(0, 0, w, h, paint);
+                paint.setShader(new RadialGradient(w * 1.02f, h * 0.98f, Math.max(w, h) * 0.62f,
+                        new int[]{0x7A3B087C, 0x301E105C, 0x001E105C},
+                        new float[]{0f, 0.58f, 1f}, Shader.TileMode.CLAMP));
+                canvas.drawRect(0, 0, w, h, paint);
+                paint.setShader(null);
+                paint.setStyle(Paint.Style.STROKE);
+                paint.setStrokeWidth(dp(1));
+                paint.setShader(new android.graphics.LinearGradient(0, 0, w, h,
+                        new int[]{0x995179BE, 0x775D49C8, 0x994821A5}, null, Shader.TileMode.CLAMP));
+                android.graphics.RectF frame = new android.graphics.RectF(dp(0.5f), dp(0.5f), w - dp(0.5f), h - dp(0.5f));
+                canvas.drawRoundRect(frame, dp(17), dp(17), paint);
+                paint.setShader(null);
+                paint.setStyle(Paint.Style.FILL);
+                canvas.restore();
+            }
+            @Override public void setAlpha(int alpha) {}
+            @Override public void setColorFilter(ColorFilter colorFilter) {}
+            @Override public int getOpacity() { return PixelFormat.OPAQUE; }
+        };
+    }
+    private Drawable homeGradient() {
+        return new Drawable() {
+            private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            @Override public void draw(Canvas canvas) {
+                Rect bounds = getBounds();
+                float w = bounds.width(), h = bounds.height();
+                if (w <= 0 || h <= 0) return;
+                canvas.save();
+                canvas.translate(bounds.left, bounds.top);
+                paint.setShader(null);
+                paint.setColor(0xFF020711);
+                canvas.drawRect(0, 0, w, h, paint);
+
+                paint.setShader(new RadialGradient(w * 0.50f, w * 0.02f, w * 0.68f,
+                        new int[]{0xA51C4F9A, 0x4A10336E, 0x0010336E},
+                        new float[]{0f, 0.48f, 1f}, Shader.TileMode.CLAMP));
+                canvas.drawRect(0, 0, w, h, paint);
+                paint.setShader(new RadialGradient(w * 0.94f, w * 1.62f, w * 0.94f,
+                        new int[]{0x9C4B08B7, 0x4A291064, 0x00291064},
+                        new float[]{0f, 0.50f, 1f}, Shader.TileMode.CLAMP));
+                canvas.drawRect(0, 0, w, h, paint);
+
+                Path topArc = new Path();
+                topArc.moveTo(w * 0.44f, -w * 0.035f);
+                topArc.cubicTo(w * 0.59f, w * 0.09f, w * 0.82f, w * 0.27f, w * 1.02f, w * 0.42f);
+                Path bottomArc = new Path();
+                bottomArc.moveTo(-w * 0.04f, w * 1.44f);
+                bottomArc.cubicTo(w * 0.28f, w * 1.63f, w * 0.65f, w * 1.76f, w * 1.04f, w * 1.72f);
+
+                paint.setStyle(Paint.Style.STROKE);
+                paint.setStrokeCap(Paint.Cap.ROUND);
+                paint.setStrokeWidth(dp(2.2f));
+                paint.setShader(new android.graphics.LinearGradient(0, 0, w, w * 0.42f,
+                        new int[]{0xFF0879FF, 0xFF174DFF, 0xFF9A16FF}, null, Shader.TileMode.CLAMP));
+                canvas.drawPath(topArc, paint);
+                paint.setStrokeWidth(dp(1.5f));
+                paint.setShader(new android.graphics.LinearGradient(0, w * 1.44f, w, w * 1.72f,
+                        new int[]{0xFF087BFF, 0xFF244CFF, 0xFF9A16FF}, null, Shader.TileMode.CLAMP));
+                canvas.drawPath(bottomArc, paint);
+                paint.setShader(null);
+                paint.setStyle(Paint.Style.FILL);
+                canvas.restore();
+            }
+            @Override public void setAlpha(int alpha) {}
+            @Override public void setColorFilter(ColorFilter colorFilter) {}
+            @Override public int getOpacity() { return PixelFormat.OPAQUE; }
+        };
+    }
+    private Drawable successOutline(int radius) {
         return new Drawable() {
             private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
             private final Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -1727,7 +2752,7 @@ root.addView(logo, new LinearLayout.LayoutParams(dp(126), dp(126)));
                 canvas.drawRoundRect(rect, radius, radius, fill);
                 fill.setShader(null);
                 stroke.setStyle(Paint.Style.STROKE);
-                stroke.setStrokeWidth(dp(1.5f));
+                stroke.setStrokeWidth(dp(1.8f));
                 stroke.setShader(new android.graphics.LinearGradient(bounds.left, bounds.top, bounds.right, bounds.bottom,
                         new int[]{0xCC22B9FF, 0xA83362FF, 0xCCB52AFF}, null, Shader.TileMode.CLAMP));
                 rect.inset(dp(0.75f), dp(0.75f));
