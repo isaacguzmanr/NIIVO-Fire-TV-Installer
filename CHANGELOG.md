@@ -2,6 +2,22 @@
 
 Cambios relevantes por versión de NIIVO. Las notas describen cambios presentes en el código y artefactos disponibles; no implican que cada combinación de dispositivo se haya probado físicamente.
 
+## 2.1.0-beta.4 — solo NIIVO Installer, 27 de octubre de 2026
+
+Esta pre-release actualiza únicamente la aplicación instaladora. El APK del Launcher incluido y su versión no cambian.
+
+### NIIVO Installer
+
+- Añade **Reparar accesibilidad** en Configuración. Puede reutilizar la IP guardada o solicitar una dirección, verifica que el dispositivo sea Fire TV y que NIIVO esté instalado antes de modificar el servicio.
+- Después de instalar o actualizar el Launcher, intenta habilitar y verificar el servicio de accesibilidad por ADB. Si Fire OS no confirma el cambio, la instalación se informa por separado y se indica cómo ejecutar la reparación manual.
+- Conserva los servicios de accesibilidad que ya estaban habilitados al agregar NIIVO.
+- Se fija `versionName 2.1.0-beta.4`, `versionCode 19` y se conserva `applicationId com.nivo.installer`.
+
+### Validación
+
+- `clean assembleRelease` finalizó correctamente; se verificaron el identificador, la versión y la firma del APK.
+- El certificado coincide con el Installer beta.1 local disponible. La reparación mediante ADB en un Fire TV físico queda pendiente de confirmación del usuario.
+
 ## 2.1.0-beta.2 — solo NIIVO Launcher, 26 de octubre de 2026
 
 Esta pre-release actualiza únicamente el launcher para pruebas. No incluye una nueva versión del Installer.

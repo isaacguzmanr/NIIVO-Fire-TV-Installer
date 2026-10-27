@@ -30,7 +30,10 @@ La pantalla de actualizaciones de la captura muestra honestamente el estado **Fi
 | Aplicación | Versión | versionCode | applicationId |
 | --- | ---: | ---: | --- |
 | NIIVO Launcher | `2.0` | `10` | `com.ivantrj.glasslauncher` |
-| NIIVO Installer | `2.0` | `17` | `com.nivo.installer` |
+| NIIVO Installer estable | `2.0` | `17` | `com.nivo.installer` |
+| NIIVO Installer beta actual | `2.1.0-beta.4` | `19` | `com.nivo.installer` |
+
+La beta del Installer es una pre-release para pruebas. La versión estable recomendada sigue siendo 2.0; [descarga la beta 2.1.0-beta.4](https://github.com/isaacguzmanr/NIIVO-Fire-TV-Installer/releases/tag/v2.1.0-beta.4) si quieres probar la reparación de accesibilidad.
 
 Los valores de versión se definen en los respectivos `app/build.gradle`. El Installer lee la versión incluida del Launcher desde los metadatos reales del APK.
 
@@ -50,6 +53,8 @@ Los valores de versión se definen en los respectivos `app/build.gradle`. El Ins
 - Instala y desinstala el APK incluido mediante ADB, después de que el usuario autorice la conexión en el televisor.
 - Comprueba releases públicos de GitHub para el Launcher, valida el nombre y la versión del APK y comprueba el SHA-256 cuando el release lo publica.
 - Separa los canales según la versión instalada: una instalación estable consulta releases estables y una versión beta permite consultar versiones beta y estables.
+- Intenta habilitar y verificar por ADB el servicio de accesibilidad de NIIVO tras instalar o actualizar el Launcher; si el dispositivo no lo confirma, presenta una advertencia y ofrece la reparación manual desde Configuración.
+- Permite reparar accesibilidad desde Configuración, reusando la IP guardada o solicitando otra y validando que NIIVO esté instalado en un Fire TV antes de cambiar el servicio.
 - Incluye pantallas de configuración, ADB, privacidad, soporte y acerca de.
 
 La presencia de una función en esta lista confirma que existe en el código. No significa que se haya validado en todos los modelos de Fire TV.

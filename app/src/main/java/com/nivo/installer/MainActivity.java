@@ -672,6 +672,7 @@ public final class MainActivity extends Activity {
                 if (fileVersion == null || UpdateManager.compareVersions(fileVersion, release.version) != 0) throw new IOException("La versión del APK no coincide con el release esperado.");
                 runOnUiThread(() -> showUpdateInstalling(release.version));
                 AdbConnection connection = connect(host);
+                String accessibilityWarning = null;
                 try {
                     pushApk(connection, downloadedApk, "/data/local/tmp/niivo-update.apk");
                     String result = runShell(connection, "pm install -r -g /data/local/tmp/niivo-update.apk");
@@ -680,9 +681,18 @@ public final class MainActivity extends Activity {
                     java.util.regex.Matcher installed = java.util.regex.Pattern.compile("versionName=([^\\s]+)").matcher(details == null ? "" : details);
                     if (!installed.find() || UpdateManager.compareVersions(installed.group(1), release.version) != 0)
                         throw new IOException("La instalación terminó, pero Fire TV no confirmó la versión " + release.version + ".");
+                    try {
+                        enableLauncher(connection);
+                    } catch (Exception ex) {
+                        accessibilityWarning = ex.getMessage() == null
+                                ? "No se pudo reactivar el servicio de accesibilidad. Usa Configuración > Reparar accesibilidad."
+                                : "NIIVO se actualizó, pero no se pudo reactivar accesibilidad: " + ex.getMessage()
+                                  + " Usa Configuración > Reparar accesibilidad.";
+                    }
                 } finally { try { connection.close(); } catch (Exception ignored) {} }
                 updateOperationRunning = false;
-                runOnUiThread(() -> showUpdateDone(release.version));
+                String warning = accessibilityWarning;
+                runOnUiThread(() -> showUpdateDone(release.version, warning));
             } catch (Exception ex) {
                 updateOperationRunning = false;
                 if (cancelRequested) runOnUiThread(() -> showUpdateError("Actualización cancelada", "No se completó la actualización.", host, false));
@@ -751,6 +761,10 @@ public final class MainActivity extends Activity {
     }
 
     private void showUpdateDone(String version) {
+        showUpdateDone(version, null);
+    }
+
+    private void showUpdateDone(String version, String accessibilityWarning) {
         if (!updatesScreenVisible) return;
         installedTvVersion = version;
         LinearLayout page = updatesPage("NIIVO se actualizó correctamente en el Fire TV.");
@@ -758,7 +772,11 @@ public final class MainActivity extends Activity {
         SuccessRingView success = new SuccessRingView(this);
         LinearLayout.LayoutParams ringLp = new LinearLayout.LayoutParams(dp(86), dp(86)); ringLp.gravity = Gravity.CENTER_HORIZONTAL; ringLp.topMargin = dp(12); ringLp.bottomMargin = dp(12);
         page.addView(success, ringLp);
-        page.addView(updateStatusCard("¡Actualizado!", "Fire TV confirmó que NIIVO " + version + " quedó instalado.", 0xFF13C982, "✓"), updateCardLayout(dp(96), 18));
+        String message = "Fire TV confirmó que NIIVO " + version + " quedó instalado.";
+        if (accessibilityWarning != null) message += "\n\n" + accessibilityWarning;
+        page.addView(updateStatusCard(accessibilityWarning == null ? "¡Actualizado!" : "Actualizado; revisa accesibilidad",
+                message, accessibilityWarning == null ? 0xFF13C982 : 0xFFFFB84D,
+                accessibilityWarning == null ? "✓" : "!"), updateCardLayout(dp(accessibilityWarning == null ? 96 : 138), 18));
         Button done = button("Listo", true); page.addView(done, updateCardLayout(dp(58), 0));
         done.setOnClickListener(v -> { updatesScreenVisible = false; showHome(); }); done.requestFocus();
     }
@@ -773,8 +791,11 @@ public final class MainActivity extends Activity {
         page.setPadding(dp(18), dp(18), dp(18), dp(26));
         addSettingsHeader(page, "Configuración", "Personaliza NIIVO a tu gusto.", this::showHome);
 
+        LinearLayout repairCard = settingsCard(20, "Reparar accesibilidad",
+                "Comprueba y reactiva el inicio de NIIVO por ADB.", true, v -> beginAccessibilityRepair());
+        page.addView(repairCard, settingsOptionLayout());
         LinearLayout adbCard = settingsCard(11, "Mantener ADB",
-                "Mantiene activo el acceso ADB después de reiniciar.", true, v -> showAdbSettings());
+                "Mantiene activo el acceso ADB después de reiniciar.", false, v -> showAdbSettings());
         page.addView(adbCard, settingsOptionLayout());
         LinearLayout privacyCard = settingsCard(25, "Privacidad",
                 "Gestiona tus datos y preferencias de privacidad.", false, v -> showPrivacySettings());
@@ -785,7 +806,82 @@ public final class MainActivity extends Activity {
         LinearLayout aboutCard = settingsCard(7, "Acerca de",
                 "Versión, información legal y créditos.", false, v -> showAboutSettings());
         page.addView(aboutCard, settingsOptionLayout());
-        adbCard.requestFocus();
+        repairCard.requestFocus();
+    }
+
+    private boolean accessibilityRepairRunning;
+
+    private void beginAccessibilityRepair() {
+        String host = getPreferences(MODE_PRIVATE).getString("last_fire_tv_host", "").trim();
+        if (host.isEmpty()) {
+            showAccessibilityRepairHostDialog("");
+            return;
+        }
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("Reparar accesibilidad")
+                .setMessage("Se conectará al Fire TV guardado, comprobará que NIIVO esté instalado y volverá a activar su servicio de accesibilidad.")
+                .setNegativeButton("Cancelar", null)
+                .setNeutralButton("Cambiar IP", (dialog, which) -> showAccessibilityRepairHostDialog(host))
+                .setPositiveButton("Reparar", (dialog, which) -> repairAccessibility(host))
+                .show();
+    }
+
+    private void showAccessibilityRepairHostDialog(String initialHost) {
+        EditText input = new EditText(this);
+        input.setSingleLine(true);
+        input.setInputType(android.text.InputType.TYPE_CLASS_PHONE);
+        input.setHint("IP del Fire TV, por ejemplo 192.168.1.7");
+        input.setText(initialHost);
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("Conectar con Fire TV")
+                .setMessage("Escribe la IP de la TV. Debe estar encendida, en la misma Wi‑Fi y con Depuración ADB autorizada.")
+                .setView(input)
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Reparar", (dialog, which) -> {
+                    String host = input.getText().toString().trim();
+                    if (!isValidIp(host)) {
+                        Toast.makeText(this, "Escribe una IP válida.", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    repairAccessibility(host);
+                }).show();
+    }
+
+    private void repairAccessibility(String host) {
+        if (accessibilityRepairRunning) return;
+        accessibilityRepairRunning = true;
+        Toast.makeText(this, "Comprobando y reparando NIIVO…", Toast.LENGTH_SHORT).show();
+        WORK.execute(() -> {
+            AdbConnection connection = null;
+            String failure = null;
+            try {
+                connection = connect(host);
+                String deviceInfo = runShell(connection, "getprop ro.product.manufacturer; getprop ro.product.model");
+                String deviceLower = deviceInfo == null ? "" : deviceInfo.toLowerCase(java.util.Locale.ROOT);
+                if (!deviceLower.contains("amazon") && !deviceLower.contains("aft"))
+                    throw new IOException("El dispositivo no se identificó como Fire TV. No cambié su configuración. " + clean(deviceInfo));
+                String packagePath = runShell(connection, "pm path " + FIRE_PACKAGE);
+                if (packagePath == null || !packagePath.contains("package:"))
+                    throw new IOException("NIIVO no está instalado en ese Fire TV. Instálalo primero y vuelve a reparar.");
+                enableLauncher(connection);
+                getPreferences(MODE_PRIVATE).edit().putString("last_fire_tv_host", host).apply();
+            } catch (Exception ex) {
+                failure = ex.getMessage() == null ? "No se pudo reparar el servicio." : clean(ex.getMessage());
+            } finally {
+                if (connection != null) try { connection.close(); } catch (Exception ignored) {}
+                accessibilityRepairRunning = false;
+            }
+            String error = failure;
+            runOnUiThread(() -> {
+                if (error == null) showInfoDialog("Accesibilidad reparada", "NIIVO quedó habilitado como servicio de accesibilidad y se abrió en el Fire TV.");
+                else new android.app.AlertDialog.Builder(this)
+                        .setTitle("No se pudo reparar")
+                        .setMessage(error + "\n\nComprueba que la TV esté encendida, en la misma Wi‑Fi y que hayas aceptado la autorización ADB.")
+                        .setNegativeButton("Cerrar", null)
+                        .setPositiveButton("Cambiar IP", (dialog, which) -> showAccessibilityRepairHostDialog(host))
+                        .show();
+            });
+        });
     }
 
     private LinearLayout.LayoutParams settingsOptionLayout() {
@@ -927,8 +1023,15 @@ public final class MainActivity extends Activity {
                 : (currentlyEnabled.toLowerCase(java.util.Locale.ROOT).contains(ACCESSIBILITY.toLowerCase(java.util.Locale.ROOT))
                     ? currentlyEnabled.trim() : currentlyEnabled.trim() + ":" + ACCESSIBILITY);
         runShell(connection, "settings put secure enabled_accessibility_services " + services
-                + "; settings put secure accessibility_enabled 1"
-                + "; am start -n " + FIRE_PACKAGE + "/.HomeActivity");
+                + "; settings put secure accessibility_enabled 1");
+        String enabledServices = runShell(connection, "settings get secure enabled_accessibility_services");
+        String accessibilityEnabled = runShell(connection, "settings get secure accessibility_enabled");
+        if (enabledServices == null
+                || !enabledServices.toLowerCase(java.util.Locale.ROOT).contains(ACCESSIBILITY.toLowerCase(java.util.Locale.ROOT))
+                || accessibilityEnabled == null || !"1".equals(accessibilityEnabled.trim())) {
+            throw new IOException("Fire TV no confirmó que el servicio de accesibilidad de NIIVO quedara activado.");
+        }
+        runShell(connection, "am start -n " + FIRE_PACKAGE + "/.HomeActivity");
     }
 
     private String getEmbeddedLauncherVersion() {
@@ -1809,6 +1912,10 @@ public final class MainActivity extends Activity {
         if (socket != null) try { socket.close(); } catch (Exception ignored) {}
     }
     private void showSuccess(boolean removed, String host) {
+        showSuccess(removed, host, null);
+    }
+
+    private void showSuccess(boolean removed, String host, String accessibilityWarning) {
         LinearLayout page = newPage();
         page.setGravity(Gravity.CENTER_HORIZONTAL);
         page.setPadding(dp(18), 0, dp(18), 0);
@@ -1819,13 +1926,15 @@ public final class MainActivity extends Activity {
         View check = new SuccessRingView(this);
         page.addView(check, new LinearLayout.LayoutParams(dp(156), dp(156)));
 
-        TextView title = text(removed ? "Desinstalado" : "¡Listo!", 24, WHITE, true);
+        TextView title = text(removed ? "Desinstalado" : accessibilityWarning == null ? "¡Listo!" : "Instalado; revisa accesibilidad", 24, WHITE, true);
         title.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(-1, -2);
         titleLp.topMargin = dp(19);
         page.addView(title, titleLp);
 
-        TextView message = text(removed ? "NIIVO se quitó correctamente." : "NIIVO se instaló correctamente.", 14, 0xFFE3EAF2, false);
+        String successMessage = removed ? "NIIVO se quitó correctamente." : "NIIVO se instaló correctamente.";
+        if (!removed && accessibilityWarning != null) successMessage += "\n\n" + accessibilityWarning;
+        TextView message = text(successMessage, 14, 0xFFE3EAF2, false);
         message.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams messageLp = new LinearLayout.LayoutParams(-1, -2);
         messageLp.topMargin = dp(8);
@@ -2048,6 +2157,7 @@ public final class MainActivity extends Activity {
         setProgressActivity(true);
         WORK.execute(() -> {
             AdbConnection connection = null;
+            String accessibilityWarning = null;
             try {
                 connection = connect(host);
                 AdbConnection active = connection;
@@ -2090,13 +2200,21 @@ public final class MainActivity extends Activity {
                     if (!install.contains("Success")) throw new IOException("La TV no aceptó la instalación. " + clean(install));
 
                     updateOperationProgress(88, 3, "Finalizando…", "Configurando NIIVO como launcher.");
-                    enableLauncher(active);
+                    try {
+                        enableLauncher(active);
+                    } catch (Exception ex) {
+                        accessibilityWarning = ex.getMessage() == null
+                                ? "No se pudo activar accesibilidad. Usa Configuración > Reparar accesibilidad."
+                                : "No se pudo activar accesibilidad: " + ex.getMessage()
+                                  + " Usa Configuración > Reparar accesibilidad.";
+                    }
                     if (cancelRequested) throw new IOException("Operación cancelada.");
                 }
+                String warning = accessibilityWarning;
                 updateOperationProgress(100, 4, uninstallMode ? "Desinstalación completada" : "Instalación completada", "Proceso terminado correctamente.");
                 runOnUiThread(() -> {
                     operationRunning = false;
-                    showSuccess(uninstallMode, host);
+                    showSuccess(uninstallMode, host, warning);
                 });
             } catch (Exception ex) {
                 if (cancelRequested) {
