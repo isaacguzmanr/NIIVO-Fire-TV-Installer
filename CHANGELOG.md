@@ -2,6 +2,34 @@
 
 Cambios relevantes por versión de NIIVO. Las notas describen cambios presentes en el código y artefactos disponibles; no implican que cada combinación de dispositivo se haya probado físicamente.
 
+## 2.1.0 — estable, 31 de octubre de 2026
+
+Publicación estable de NIIVO Launcher y NIIVO Installer. Esta versión reúne los cambios incluidos y probados durante la serie beta.
+
+### NIIVO Launcher
+
+- Mejora el menú contextual de las aplicaciones favoritas y el desplazamiento de la lista de aplicaciones ocultas.
+- Incorpora fondos nuevos y ajustes visuales en el launcher y las tarjetas.
+- Corrige el contorno inferior del indicador de enfoque del dock y muestra cinco posiciones en el indicador de páginas.
+- Conserva la navegación del dock con el control remoto y la organización de las aplicaciones favoritas.
+
+### NIIVO Installer
+
+- Mejora la búsqueda y selección del Fire TV de destino; también permite introducir su IP manualmente.
+- Añade la reparación del servicio de accesibilidad de NIIVO mediante ADB.
+- Mejora la comprobación e instalación de actualizaciones del Launcher desde GitHub.
+
+### Distribución
+
+- Publica `NIIVO-Launcher-v2.1.0.apk` y `NIIVO-Installer-v2.1.0.apk` en la [release estable](https://github.com/isaacguzmanr/NIIVO-Fire-TV-Installer/releases/tag/v2.1.0), junto con `SHA256SUMS.txt`.
+- El procedimiento recomendado es instalar o actualizar el Launcher desde NIIVO Installer en Android.
+- La actualización conserva los datos cuando el identificador del paquete y la firma coinciden. Si Fire OS desactiva Accesibilidad, se puede ejecutar la reparación desde el Installer.
+
+### Capturas
+
+- Se incorporan capturas reales disponibles del selector de fondos y de su vista previa.
+- No se incluyen capturas de menús para los que no hay una captura real verificada.
+
 ## 2.1.0-beta.4 — solo NIIVO Installer, 27 de octubre de 2026
 
 Esta pre-release actualiza únicamente la aplicación instaladora. El APK del Launcher incluido y su versión no cambian.
